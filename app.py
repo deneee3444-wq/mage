@@ -41,12 +41,33 @@ MAGE_HEADERS_BASE = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
 }
 
+# ── Görsel Modelleri ───────────────────────────────────────
 MODELS = {
     "mango": {"model_id": "mango-v2", "architecture": "mango", "resolution": "2K"},
-    "guava": {"model_id": "guava-pro", "architecture": "guava", "resolution": "1K"}
+    "guava": {"model_id": "guava-pro", "architecture": "guava", "resolution": "1K"},
 }
 
-# ── Sadece RAM'de Çalışan Veritabanı (Dosyaya Kaydetmez) ───
+# ── Video Modelleri ────────────────────────────────────────
+# Mevcut modeller: peach_max, kiwi (yorum satırlarından)
+VIDEO_MODELS = {
+    "peach_max": {
+        "model_id": "peach_max",
+        "architecture": "peach_max",
+        "aspect_ratio": "cinema",
+        "peach_max_aspect_ratio": "16:9",
+        "resolution": "480p",
+        # "resolution": "720p",  # alternatif
+    },
+    "kiwi": {
+        "model_id": "kiwi",
+        "architecture": "kiwi",
+        "aspect_ratio": "landscape",
+        "peach_max_aspect_ratio": "16:9",
+        "resolution": "480p",
+    },
+}
+
+# ── Sadece RAM'de Çalışan Veritabanı ───────────────────────
 tasks = {}
 task_lock = threading.Lock()
 
@@ -90,18 +111,24 @@ def _creations_router_state_tree():
     return urllib.parse.quote(json.dumps(tree), safe='')
 
 # ── İşçi Fonksiyon ─────────────────────────────────────────
-def run_mage_task(task_id, data_uri, prompt, model_key, aspect_ratio):
+def run_mage_task(task_id, data_uri, prompt, mode, model_key, aspect_ratio,
+                  end_data_uri=None, video_duration="5", video_audio=True):
+    """
+    mode: "image" veya "video"
+    model_key: görsel modları için MODELS anahtarı, video için VIDEO_MODELS anahtarı
+    end_data_uri: video end-frame data URI (opsiyonel)
+    """
     try:
         if task_id not in tasks: return
         update_task_state(task_id, {'status': "Çalışıyor"})
-        
-        model_config = MODELS[model_key]
+
         email = generate_random_email()
         log_task(task_id, f"🎯 Kullanılan Email: {email}")
-        
+
         session = requests.Session()
         session.headers.update({"user-agent": MAGE_HEADERS_BASE["user-agent"]})
 
+        # ── ADIM 1: Magic link ──────────────────────────────
         log_task(task_id, "📨 ADIM 1: Magic link gönderiliyor...")
         url_a1 = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_API_KEY}"
         req_a1 = requests.post(url_a1, headers=FIREBASE_HEADERS, json={
@@ -111,6 +138,7 @@ def run_mage_task(task_id, data_uri, prompt, model_key, aspect_ratio):
         if req_a1.status_code != 200: raise Exception(f"Adım 1 Hatası: {req_a1.text}")
         if task_id not in tasks: return
 
+        # ── ADIM 2: Gmail ───────────────────────────────────
         log_task(task_id, "📬 ADIM 2: Gmail bağlantısı kuruluyor...")
         creds = None
         if os.path.exists("token.json"): creds = Credentials.from_authorized_user_file("token.json", SCOPES)
@@ -124,7 +152,7 @@ def run_mage_task(task_id, data_uri, prompt, model_key, aspect_ratio):
 
         log_task(task_id, "⏳ Magic link bekleniyor (Maks 120s)...")
         magic_url = None
-        
+
         def govdeden_link_cek(mesaj):
             def parcalari_tara(payload):
                 body_data = payload.get("body", {}).get("data", "")
@@ -145,10 +173,8 @@ def run_mage_task(task_id, data_uri, prompt, model_key, aspect_ratio):
             for msg in sonuc.get("messages", []):
                 detay = service.users().messages().get(userId="me", id=msg["id"], format="full").execute()
                 headers = {h["name"]: h["value"] for h in detay["payload"]["headers"]}
-                
                 is_target_email = email.lower() in headers.get("To", "").lower()
                 is_mage_mail = "Sign in to" in headers.get("Subject", "") and ("mage" in headers.get("Subject", "").lower() or "mage.space" in headers.get("From", "").lower())
-                
                 if is_mage_mail and is_target_email:
                     bulunan_link = govdeden_link_cek(detay)
                     if bulunan_link:
@@ -158,23 +184,28 @@ def run_mage_task(task_id, data_uri, prompt, model_key, aspect_ratio):
 
         if not magic_url: raise Exception("❌ Mage magic link maili gelmedi.")
         if task_id not in tasks: return
-        log_task(task_id, f"🔗 Magic link bulundu!")
+        log_task(task_id, "🔗 Magic link bulundu!")
 
-        log_task(task_id, "🔑 ADIM 5: Firebase giriş...")
-        oob_code = parse_qs(urlparse(magic_url).query).get("oobCode", [None])[0]
+        # ── ADIM 5: Firebase giriş ──────────────────────────
+        params = parse_qs(urlparse(magic_url).query)
+        oob_code = params.get("oobCode", [None])[0]
+        if not oob_code: raise Exception("oobCode bulunamadı!")
+
         url_a5 = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithEmailLink?key={FIREBASE_API_KEY}"
         resp_a5 = requests.post(url_a5, headers=FIREBASE_HEADERS, json={"email": email, "oobCode": oob_code}).json()
         id_token, local_id = resp_a5["idToken"], resp_a5["localId"]
 
+        # ── ADIM 6b: Session cookie ─────────────────────────
         log_task(task_id, "🍪 ADIM 6b: Session cookie alınıyor...")
         url_base = f"https://www.mage.space/explore?onboarding=1&apiKey={FIREBASE_API_KEY}&oobCode={oob_code}&mode=signIn&lang=en"
         h_6b = {**MAGE_HEADERS_BASE, "next-action": "4004fa8154c009bd653c4222ef20aac441a3043a9e", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         resp_6b = session.post(url_base, headers=h_6b, data=json.dumps([id_token]))
-        
+
         match = re.search(r'__session=([^;]+)', resp_6b.headers.get("set-cookie", ""))
         if match: session.cookies.set("__session", match.group(1), domain="www.mage.space", path="/")
         else: session.cookies.set("__session", id_token, domain="www.mage.space", path="/")
 
+        # ── ADIM 7-10: Oturum sinyalleri ────────────────────
         log_task(task_id, "🌐 ADIM 7-10: Oturum açılış sinyalleri...")
         h_7 = {**MAGE_HEADERS_BASE, "next-action": "00245a0b70f1ba436b2abe58fc19beac1d9baeeec3", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         session.post(url_base, headers=h_7, data="[]")
@@ -185,15 +216,18 @@ def run_mage_task(task_id, data_uri, prompt, model_key, aspect_ratio):
         session.post(url_base, headers=h_9, data=payload_9)
 
         if task_id not in tasks: return
+
+        # ── ADIM 11: Settings ───────────────────────────────
         log_task(task_id, "⚙️ ADIM 11: Settings değiştiriliyor...")
         h_11 = {**MAGE_HEADERS_BASE, "next-action": "403d0eb104c134d56b2406261bf1fb90279d3f8030", "next-router-state-tree": _settings_router_state_tree(), "referer": "https://www.mage.space/settings"}
         session.post("https://www.mage.space/settings", headers=h_11, data=json.dumps([{"rating": "M+", "moderation": ["suggestive", "nudity", "violence", "nsfw"]}]))
 
-        log_task(task_id, "📤 ADIM 12: Resim Yükleniyor...")
+        # ── ADIM 12: Start frame yükle ──────────────────────
+        log_task(task_id, "📤 ADIM 12: Start frame yükleniyor...")
         payload_12 = json.dumps([data_uri, local_id])
         h_12 = {**MAGE_HEADERS_BASE, "next-action": "60b80f08a867ba84df1c0c9354a85ae5eccc3f9f31", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
         resp_12 = session.post("https://www.mage.space/explore", headers=h_12, data=payload_12.encode("utf-8"))
-        
+
         cdn_url = None
         for satir in resp_12.text.splitlines():
             if satir.startswith("1:"):
@@ -202,32 +236,80 @@ def run_mage_task(task_id, data_uri, prompt, model_key, aspect_ratio):
         if not cdn_url:
             m = re.search(r'"(https://cdn3\.mage\.space/uploads/[^"]+)"', resp_12.text)
             if m: cdn_url = m.group(1)
-        if not cdn_url: raise Exception("Resim CDN URL alınamadı.")
+        if not cdn_url: raise Exception("Start frame CDN URL alınamadı.")
+
+        # ── ADIM 12b: End frame yükle (sadece video) ────────
+        cdn_url_end = None
+        if mode == "video" and end_data_uri:
+            log_task(task_id, "📤 ADIM 12b: End frame yükleniyor...")
+            payload_12b = json.dumps([end_data_uri, local_id])
+            resp_12b = session.post("https://www.mage.space/explore", headers=h_12, data=payload_12b.encode("utf-8"))
+            for satir in resp_12b.text.splitlines():
+                if satir.startswith("1:"):
+                    deger = satir[2:].strip().strip('"')
+                    if deger.startswith("http"): cdn_url_end = deger; break
+            if not cdn_url_end:
+                m = re.search(r'"(https://cdn3\.mage\.space/uploads/[^"]+)"', resp_12b.text)
+                if m: cdn_url_end = m.group(1)
+            if cdn_url_end:
+                log_task(task_id, "✅ End frame CDN URL alındı.")
+            else:
+                log_task(task_id, "⚠️ End frame CDN URL alınamadı, end frame olmadan devam ediliyor.")
 
         if task_id not in tasks: return
-        log_task(task_id, f"🎨 ADIM 13: Üretim başlıyor ({model_config['model_id']})...")
-        payload_13 = [{
-            "architectureConfig": {
-                "seed": None, "prompt": prompt, "model_id": model_config['model_id'], "fast_mode": True,
-                "resolution": model_config['resolution'], "architecture": model_config['architecture'],
-                "aspect_ratio": aspect_ratio, "prompt_extend": False, "additional_images": [], "image": cdn_url,
-            },
-            "architectureConfigToSave": "$0:0:architectureConfig", "authToken": id_token, "conceptId": None, "activePowerPack": None,
-        }]
+
+        # ── ADIM 13: Üretim ─────────────────────────────────
+        if mode == "video":
+            video_cfg = VIDEO_MODELS.get(model_key, VIDEO_MODELS["peach_max"])
+            log_task(task_id, f"🎬 ADIM 13: Video üretimi başlıyor ({video_cfg['model_id']})...")
+            payload_13 = [{
+                "architectureConfig": {
+                    "seed": None,
+                    "audio": video_audio,
+                    "prompt": prompt,
+                    "duration": str(video_duration),
+                    "model_id": video_cfg["model_id"],
+                    "fast_mode": True,
+                    "resolution": video_cfg["resolution"],
+                    "architecture": video_cfg["architecture"],
+                    "aspect_ratio": video_cfg.get("aspect_ratio", aspect_ratio),
+                    "peach_max_aspect_ratio": video_cfg.get("peach_max_aspect_ratio", "16:9"),
+                    "image": cdn_url,
+                    "additional_images": [cdn_url_end] if cdn_url_end else None,
+                    "last_image": cdn_url_end if cdn_url_end else "$undefined",
+                },
+                "architectureConfigToSave": "$0:0:architectureConfig",
+                "authToken": id_token,
+                "conceptId": None,
+                "activePowerPack": None,
+            }]
+        else:
+            model_config = MODELS.get(model_key, MODELS["mango"])
+            log_task(task_id, f"🎨 ADIM 13: Görsel üretimi başlıyor ({model_config['model_id']})...")
+            payload_13 = [{
+                "architectureConfig": {
+                    "seed": None, "prompt": prompt, "model_id": model_config['model_id'], "fast_mode": True,
+                    "resolution": model_config['resolution'], "architecture": model_config['architecture'],
+                    "aspect_ratio": aspect_ratio, "prompt_extend": False, "additional_images": [], "image": cdn_url,
+                },
+                "architectureConfigToSave": "$0:0:architectureConfig", "authToken": id_token, "conceptId": None, "activePowerPack": None,
+            }]
+
         h_13 = {**MAGE_HEADERS_BASE, "next-action": "40b4e3d260af5ec332817cad1adf8470dbac10537b", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
         resp_13 = session.post("https://www.mage.space/explore", headers=h_13, data=json.dumps(payload_13).encode("utf-8"))
-        
+
         h_match = re.search(r'"history_id":"([^"]+)"', resp_13.text)
         if not h_match: raise Exception("History ID alınamadı.")
         history_id = h_match.group(1)
 
+        # ── ADIM 14: Sonuç polling ──────────────────────────
         log_task(task_id, "⏳ ADIM 14: Sonuç bekleniyor...")
         time.sleep(15)
-        
+
         url_14 = "https://www.mage.space/creations"
         payload_14 = json.dumps([local_id, 100, 0, {"status": "success", "type": "$undefined"}])
         h_14 = {**MAGE_HEADERS_BASE, "next-action": "78e94247359b1e376c258d471702a625a78c66df7b", "next-router-state-tree": _creations_router_state_tree(), "referer": "https://www.mage.space/creations"}
-        
+
         result_url = None
         for _ in range(60):
             if task_id not in tasks: return
@@ -240,27 +322,36 @@ def run_mage_task(task_id, data_uri, prompt, model_key, aspect_ratio):
                             for h in hist_data.get("histories", []):
                                 if h.get("id") == history_id:
                                     if h.get("status") == "success":
-                                        result_url = h.get("result", {}).get("data", {}).get("image")
+                                        data_block = h.get("result", {}).get("data", {})
+                                        # Video önce, sonra image kontrol et
+                                        result_url = data_block.get("video") or data_block.get("image")
                                     elif h.get("status") == "failed":
                                         raise Exception("Üretim başarısız oldu!")
-                        except: pass
-            
+                        except Exception as ex:
+                            if "başarısız" in str(ex): raise
+                            pass
+
             if not result_url:
+                # regex fallback (hem video hem image)
+                vid_match = re.search(r'"video":"(https://cdn3\.mage\.space/[^"]+)"', resp_14.text)
                 img_match = re.search(r'"image":"(https://cdn3\.mage\.space/temp/[^"]+)"', resp_14.text)
-                if img_match: result_url = img_match.group(1)
+                if vid_match: result_url = vid_match.group(1)
+                elif img_match: result_url = img_match.group(1)
 
             if result_url: break
             time.sleep(5)
 
         if result_url:
-            log_task(task_id, "✨ GÖRSEL HAZIR!")
-            update_task_state(task_id, {'status': 'Tamamlandı', 'result_url': result_url})
+            label = "🎬 VİDEO" if mode == "video" else "✨ GÖRSEL"
+            log_task(task_id, f"{label} HAZIR!")
+            update_task_state(task_id, {'status': 'Tamamlandı', 'result_url': result_url, 'result_type': mode})
         else:
             raise Exception("Zaman aşımı - sonuç alınamadı.")
 
     except Exception as e:
         log_task(task_id, f"❌ HATA: {str(e)}")
         update_task_state(task_id, {'status': 'Hata'})
+
 
 # ── FLASK ROUTELARI ───────────────────────────────────────
 @app.route('/')
@@ -269,15 +360,23 @@ def index():
 
 @app.route('/start_task', methods=['POST'])
 def start_task():
-    if 'image' not in request.files: return jsonify({"error": "Resim eksik"}), 400
-    
+    if 'image' not in request.files:
+        return jsonify({"error": "Start frame eksik"}), 400
+
     file = request.files['image']
-    prompt = request.form.get('prompt', 'hello')
-    model = request.form.get('model', 'mango')
+    if file.filename == '':
+        return jsonify({"error": "Dosya seçilmedi"}), 400
+
+    prompt       = request.form.get('prompt', 'hello')
+    mode         = request.form.get('mode', 'image')          # "image" veya "video"
+    model        = request.form.get('model', 'mango')
     aspect_ratio = request.form.get('aspect_ratio', 'portrait')
 
-    if file.filename == '': return jsonify({"error": "Dosya seçilmedi"}), 400
+    # Video'ya özgü parametreler
+    video_duration = request.form.get('video_duration', '5')
+    video_audio    = request.form.get('video_audio', 'true').lower() == 'true'
 
+    # Start frame → data URI
     image_bytes = file.read()
     b64_image = base64.b64encode(image_bytes).decode("utf-8")
     ext = os.path.splitext(file.filename)[1].lower()
@@ -285,18 +384,32 @@ def start_task():
     mime = mime_map.get(ext, "image/jpeg")
     data_uri = f"data:{mime};base64,{b64_image}"
 
+    # End frame (opsiyonel, sadece video modunda)
+    end_data_uri = None
+    if mode == "video" and 'end_image' in request.files:
+        end_file = request.files['end_image']
+        if end_file and end_file.filename != '':
+            end_bytes = end_file.read()
+            end_ext   = os.path.splitext(end_file.filename)[1].lower()
+            end_mime  = mime_map.get(end_ext, "image/jpeg")
+            end_data_uri = f"data:{end_mime};base64,{base64.b64encode(end_bytes).decode('utf-8')}"
+
     task_id = str(uuid.uuid4())
-    
     with task_lock:
         tasks[task_id] = {
             "status": "Başlıyor...",
             "logs": [],
             "result_url": None,
+            "result_type": mode,
             "prompt": prompt,
-            "model": model
+            "model": model,
+            "mode": mode,
         }
 
-    thread = threading.Thread(target=run_mage_task, args=(task_id, data_uri, prompt, model, aspect_ratio))
+    thread = threading.Thread(
+        target=run_mage_task,
+        args=(task_id, data_uri, prompt, mode, model, aspect_ratio, end_data_uri, video_duration, video_audio)
+    )
     thread.daemon = True
     thread.start()
 
