@@ -18,6 +18,9 @@
             --accent: #7c6fe0;
             --accent2: #a78bfa;
             --accent-glow: rgba(124,111,224,0.18);
+            --accent-video: #e06f6f;
+            --accent-video2: #f87171;
+            --accent-video-glow: rgba(224,111,111,0.18);
             --text: #e8e6f0;
             --muted: #6e6e88;
             --muted2: #9898b0;
@@ -71,7 +74,6 @@
         }
 
         .logo-icon svg { width: 14px; height: 14px; fill: #fff; }
-
         .logo-text { font-size: 0.9rem; font-weight: 600; color: #fff; white-space: nowrap; }
         .logo-text span { color: var(--accent2); font-weight: 400; }
 
@@ -170,6 +172,50 @@
         .card-title { font-size: 0.86rem; font-weight: 500; color: var(--text); }
         .card-subtitle { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
 
+        /* MODE TOGGLE */
+        .mode-toggle {
+            display: flex;
+            gap: 3px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 3px;
+            margin-bottom: 14px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--muted2);
+            padding: 7px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 500;
+            font-family: var(--font);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .mode-btn svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+        .mode-btn:hover { color: var(--text); }
+
+        .mode-btn.active-image {
+            background: linear-gradient(135deg, rgba(124,111,224,0.22), rgba(79,70,229,0.14));
+            color: var(--accent2);
+            border: 1px solid rgba(124,111,224,0.25);
+        }
+
+        .mode-btn.active-video {
+            background: linear-gradient(135deg, rgba(224,111,111,0.22), rgba(229,70,70,0.14));
+            color: var(--accent-video2);
+            border: 1px solid rgba(224,111,111,0.25);
+        }
+
         /* FORM */
         .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 
@@ -215,9 +261,54 @@
 
         select option { background: #1a1a28; color: var(--text); }
 
+        /* TOGGLE SWITCH */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .toggle-label { font-size: 0.8rem; color: var(--muted2); }
+
+        .toggle {
+            position: relative;
+            width: 34px; height: 18px;
+            flex-shrink: 0;
+        }
+
+        .toggle input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: var(--surface3);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            transition: 0.2s;
+        }
+
+        .slider:before {
+            content: '';
+            position: absolute;
+            width: 12px; height: 12px;
+            left: 2px; bottom: 2px;
+            background: var(--muted);
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+
+        input:checked + .slider { background: rgba(224,111,111,0.2); border-color: rgba(224,111,111,0.35); }
+        input:checked + .slider:before { transform: translateX(16px); background: var(--accent-video2); }
+
         /* DROPZONE */
         .dropzone {
-            height: 105px;
+            height: 95px;
             border: 1.5px dashed rgba(124,111,224,0.25);
             border-radius: 9px;
             background: rgba(124,111,224,0.04);
@@ -230,31 +321,62 @@
             transition: border-color 0.2s, background 0.2s;
         }
 
-        .dropzone:hover { border-color: rgba(124,111,224,0.5); background: rgba(124,111,224,0.08); }
+        .dropzone.video-dz {
+            border-color: rgba(224,111,111,0.25);
+            background: rgba(224,111,111,0.04);
+        }
 
-        .dropzone-inner { display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+        .dropzone:hover { border-color: rgba(124,111,224,0.5); background: rgba(124,111,224,0.08); }
+        .dropzone.video-dz:hover { border-color: rgba(224,111,111,0.5); background: rgba(224,111,111,0.08); }
+
+        .dropzone-inner { display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none; }
 
         .dz-icon {
-            width: 30px; height: 30px;
+            width: 28px; height: 28px;
             background: var(--accent-glow);
             border: 1px solid rgba(124,111,224,0.2);
-            border-radius: 8px;
+            border-radius: 7px;
             display: flex; align-items: center; justify-content: center;
         }
 
-        .dz-icon svg { width: 14px; height: 14px; stroke: var(--accent2); fill: none; stroke-width: 1.8; }
-        .dz-label { font-size: 0.76rem; color: var(--muted2); }
-        .dz-hint { font-size: 0.66rem; color: var(--muted); }
+        .dz-icon.video-icon {
+            background: var(--accent-video-glow);
+            border-color: rgba(224,111,111,0.2);
+        }
 
-        #image { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; z-index: 2; }
+        .dz-icon svg { width: 13px; height: 13px; stroke: var(--accent2); fill: none; stroke-width: 1.8; }
+        .dz-icon.video-icon svg { stroke: var(--accent-video2); }
+        .dz-label { font-size: 0.73rem; color: var(--muted2); }
+        .dz-hint { font-size: 0.63rem; color: var(--muted); }
 
-        #file-preview {
+        .dz-file-input {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; z-index: 2;
+        }
+
+        .dz-preview {
             display: none;
             position: absolute; inset: 0;
             width: 100%; height: 100%;
             object-fit: contain;
             background: #000;
             z-index: 1;
+        }
+
+        /* Video frames side-by-side */
+        .frames-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .frame-label {
+            font-size: 0.64rem;
+            font-weight: 500;
+            color: var(--muted2);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 5px;
         }
 
         /* SUBMIT */
@@ -272,6 +394,8 @@
             font-family: var(--font);
             transition: opacity 0.2s, transform 0.15s;
         }
+
+        .submit-btn.video-mode { background: linear-gradient(135deg, var(--accent-video), #b91c1c); }
 
         .submit-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
         .submit-btn:active:not(:disabled) { transform: scale(0.99); }
@@ -292,13 +416,13 @@
             position: relative;
         }
 
-        .result-box img {
+        .result-box img, .result-box video {
             width: 100%; height: 100%;
             object-fit: contain;
             display: none;
         }
 
-        .result-box img.visible { display: block; }
+        .result-box img.visible, .result-box video.visible { display: block; }
 
         .result-placeholder {
             display: flex;
@@ -334,6 +458,18 @@
 
         .task-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
         .task-prompt { font-size: 0.8rem; color: var(--text); line-height: 1.5; flex: 1; }
+        .task-mode-badge {
+            font-size: 0.62rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(124,111,224,0.15);
+            color: var(--accent2);
+            border: 1px solid rgba(124,111,224,0.2);
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+        .task-mode-badge.video { background: rgba(224,111,111,0.15); color: var(--accent-video2); border-color: rgba(224,111,111,0.2); }
 
         .task-delete-btn {
             background: none;
@@ -406,7 +542,8 @@
         }
 
         .gallery-item:hover { border-color: rgba(124,111,224,0.4); transform: translateY(-2px); }
-        .gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .gallery-item.video-item:hover { border-color: rgba(224,111,111,0.4); }
+        .gallery-item img, .gallery-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
 
         .item-actions {
             position: absolute; inset: 0;
@@ -434,6 +571,20 @@
 
         .action-btn svg { width: 13px; height: 13px; stroke: #fff; fill: none; stroke-width: 1.8; }
         .action-btn:hover { background: rgba(255,255,255,0.22); }
+
+        /* VIDEO badge in gallery */
+        .gallery-video-badge {
+            position: absolute;
+            top: 5px; left: 5px;
+            background: rgba(224,111,111,0.85);
+            color: #fff;
+            font-size: 0.55rem;
+            font-weight: 700;
+            padding: 2px 5px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
         /* EMPTY */
         .empty-state {
@@ -501,48 +652,130 @@
                         <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                     </div>
                     <div>
-                        <div class="card-title">Yeni Render</div>
-                        <div class="card-subtitle">Görsel yükle ve prompt gir</div>
+                        <div class="card-title" id="formTitle">Yeni Render</div>
+                        <div class="card-subtitle" id="formSubtitle">Görsel yükle ve prompt gir</div>
                     </div>
                 </div>
 
+                <!-- Mod seçimi -->
+                <div class="mode-toggle">
+                    <button type="button" class="mode-btn active-image" id="modeImage" onclick="setMode('image')">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        Görsel
+                    </button>
+                    <button type="button" class="mode-btn" id="modeVideo" onclick="setMode('video')">
+                        <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                        Video
+                    </button>
+                </div>
+
                 <form id="generateForm">
-                    <div class="field">
-                        <label>Referans Görsel</label>
-                        <div class="dropzone" id="dropzone">
-                            <div class="dropzone-inner" id="dropzone-content">
-                                <div class="dz-icon">
-                                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <input type="hidden" id="modeInput" name="mode" value="image">
+
+                    <!-- Görsel modu: tek dropzone -->
+                    <div id="imageModeFields">
+                        <div class="field">
+                            <label>Referans Görsel</label>
+                            <div class="dropzone" id="dropzone">
+                                <div class="dropzone-inner" id="dropzone-content">
+                                    <div class="dz-icon">
+                                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    </div>
+                                    <span class="dz-label">Dosya sürükle veya seç</span>
+                                    <span class="dz-hint">PNG, JPG, WEBP</span>
                                 </div>
-                                <span class="dz-label">Dosya sürükle veya seç</span>
-                                <span class="dz-hint">PNG, JPG, WEBP</span>
+                                <input type="file" id="image" name="image" class="dz-file-input" accept="image/*">
+                                <img id="file-preview" class="dz-preview" alt="">
                             </div>
-                            <input type="file" id="image" required accept="image/*">
-                            <img id="file-preview" alt="">
+                        </div>
+
+                        <div class="field">
+                            <label>Prompt</label>
+                            <input type="text" id="prompt" name="prompt" placeholder="Cinematic shot, cyberpunk city..." required>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field" style="margin-bottom:0">
+                                <label>AI Model</label>
+                                <select id="model" name="model">
+                                    <option value="mango">Mango v2 (2K)</option>
+                                    <option value="guava">Guava Pro (1K)</option>
+                                </select>
+                            </div>
+                            <div class="field" style="margin-bottom:0">
+                                <label>Format</label>
+                                <select id="aspect_ratio" name="aspect_ratio">
+                                    <option value="cinema">16:9 Sinema</option>
+                                    <option value="landscape">3:2 Yatay</option>
+                                    <option value="portrait">9:16 Dikey</option>
+                                    <option value="square">1:1 Kare</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="field">
-                        <label>Prompt</label>
-                        <input type="text" id="prompt" placeholder="Cinematic shot, cyberpunk city..." required>
-                    </div>
-
-                    <div class="field-row">
-                        <div class="field" style="margin-bottom:0">
-                            <label>AI Model</label>
-                            <select id="model">
-                                <option value="mango">Mango v2 (2K)</option>
-                                <option value="guava">Guava Pro (1K)</option>
-                            </select>
+                    <!-- Video modu alanları -->
+                    <div id="videoModeFields" style="display:none;">
+                        <div class="frames-row">
+                            <div>
+                                <div class="frame-label">Start Frame</div>
+                                <div class="dropzone" id="dropzone-start">
+                                    <div class="dropzone-inner" id="dropzone-start-content">
+                                        <div class="dz-icon">
+                                            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                        </div>
+                                        <span class="dz-label">Başlangıç</span>
+                                        <span class="dz-hint">PNG, JPG, WEBP</span>
+                                    </div>
+                                    <input type="file" id="image_video" name="image" class="dz-file-input" accept="image/*">
+                                    <img id="start-preview" class="dz-preview" alt="">
+                                </div>
+                            </div>
+                            <div>
+                                <div class="frame-label">End Frame <span style="color:var(--muted);font-weight:400;">(opsiyonel)</span></div>
+                                <div class="dropzone video-dz" id="dropzone-end">
+                                    <div class="dropzone-inner" id="dropzone-end-content">
+                                        <div class="dz-icon video-icon">
+                                            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                        </div>
+                                        <span class="dz-label">Bitiş</span>
+                                        <span class="dz-hint">Opsiyonel</span>
+                                    </div>
+                                    <input type="file" id="end_image" name="end_image" class="dz-file-input" accept="image/*">
+                                    <img id="end-preview" class="dz-preview" alt="">
+                                </div>
+                            </div>
                         </div>
-                        <div class="field" style="margin-bottom:0">
-                            <label>Format</label>
-                            <select id="aspect_ratio">
-                                <option value="cinema">16:9 Sinema</option>
-                                <option value="landscape">3:2 Yatay</option>
-                                <option value="portrait">9:16 Dikey</option>
-                                <option value="square">1:1 Kare</option>
-                            </select>
+
+                        <div class="field">
+                            <label>Prompt</label>
+                            <input type="text" id="prompt_video" placeholder="Cinematic motion, slow pan...">
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field" style="margin-bottom:0">
+                                <label>Video Model</label>
+                                <select id="video_model" name="video_model">
+                                    <option value="peach_max">Peach Max (480p)</option>
+                                    <option value="kiwi">Kiwi (480p)</option>
+                                    <!-- peach_max 720p için ayrı seçenek eklenebilir -->
+                                </select>
+                            </div>
+                            <div class="field" style="margin-bottom:0">
+                                <label>Süre</label>
+                                <select id="video_duration" name="video_duration">
+                                    <option value="5">5 saniye</option>
+                                    <option value="10">10 saniye</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="toggle-row">
+                            <span class="toggle-label">🎵 Ses (Audio)</span>
+                            <label class="toggle">
+                                <input type="checkbox" id="video_audio" name="video_audio" checked>
+                                <span class="slider"></span>
+                            </label>
                         </div>
                     </div>
 
@@ -558,9 +791,10 @@
                             <div class="rp-icon">
                                 <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                             </div>
-                            <p class="rp-text">Render tamamlandığında<br>görsel burada çıkar</p>
+                            <p class="rp-text">Render tamamlandığında<br>görsel/video burada çıkar</p>
                         </div>
                         <img id="latestResult" src="" alt="Son render">
+                        <video id="latestVideo" src="" controls loop muted playsinline></video>
                     </div>
                 </div>
 
@@ -597,7 +831,45 @@
 
 <script>
     const activeIntervals = {};
+    let currentMode = 'image';
 
+    // ── Mod değiştir ─────────────────────────────────────────
+    function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('modeInput').value = mode;
+
+        const imgBtn = document.getElementById('modeImage');
+        const vidBtn = document.getElementById('modeVideo');
+        const submitBtn = document.getElementById('submitBtn');
+        const formTitle = document.getElementById('formTitle');
+        const formSubtitle = document.getElementById('formSubtitle');
+
+        if (mode === 'video') {
+            imgBtn.className = 'mode-btn';
+            vidBtn.className = 'mode-btn active-video';
+            document.getElementById('imageModeFields').style.display = 'none';
+            document.getElementById('videoModeFields').style.display = 'block';
+            submitBtn.className = 'submit-btn video-mode';
+            submitBtn.innerText = '🎬 Video Oluştur';
+            formTitle.innerText = 'Yeni Video';
+            formSubtitle.innerText = 'Start/End frame yükle, prompt gir';
+            document.getElementById('prompt').removeAttribute('required');
+            document.getElementById('prompt_video').setAttribute('required', '');
+        } else {
+            imgBtn.className = 'mode-btn active-image';
+            vidBtn.className = 'mode-btn';
+            document.getElementById('imageModeFields').style.display = 'block';
+            document.getElementById('videoModeFields').style.display = 'none';
+            submitBtn.className = 'submit-btn';
+            submitBtn.innerText = 'Render Başlat';
+            formTitle.innerText = 'Yeni Render';
+            formSubtitle.innerText = 'Görsel yükle ve prompt gir';
+            document.getElementById('prompt').setAttribute('required', '');
+            document.getElementById('prompt_video').removeAttribute('required');
+        }
+    }
+
+    // ── Tab ──────────────────────────────────────────────────
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -605,79 +877,139 @@
         document.getElementById('tab-' + tabId).classList.add('active');
     }
 
+    // ── Sayfa yüklenince mevcut taskleri çek ─────────────────
     window.addEventListener('DOMContentLoaded', async () => {
         try {
             const res = await fetch('/get_tasks');
             const tasks = await res.json();
             for (const [taskId, data] of Object.entries(tasks)) {
                 if (data.status === "Tamamlandı" && data.result_url) {
-                    addToGallery(taskId, data.result_url, data.prompt);
-                    showLatestResult(data.result_url);
+                    addToGallery(taskId, data.result_url, data.prompt, data.result_type);
+                    showLatestResult(data.result_url, data.result_type);
                 } else {
-                    createTaskBox(taskId, data.prompt, data.status);
+                    createTaskBox(taskId, data.prompt, data.status, data.mode || 'image');
                     if (data.status !== "Hata") startPolling(taskId);
                 }
             }
         } catch(e) {}
+
+        // ── Dropzone preview bağlamaları ────────────────────
+        bindDropzone('image', 'file-preview', 'dropzone-content');
+        bindDropzone('image_video', 'start-preview', 'dropzone-start-content');
+        bindDropzone('end_image', 'end-preview', 'dropzone-end-content');
     });
 
-    const fileInput = document.getElementById('image');
-    const filePreview = document.getElementById('file-preview');
-    const dropzoneContent = document.getElementById('dropzone-content');
-
-    fileInput.addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (file) {
+    function bindDropzone(inputId, previewId, contentId) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = ev => {
-                filePreview.src = ev.target.result;
-                filePreview.style.display = 'block';
-                dropzoneContent.style.display = 'none';
+                const preview = document.getElementById(previewId);
+                const content = document.getElementById(contentId);
+                if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; }
+                if (content) content.style.display = 'none';
             };
             reader.readAsDataURL(file);
-        }
-    });
+        });
+    }
 
+    // ── Form gönder ──────────────────────────────────────────
     document.getElementById('generateForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
-        btn.disabled = true; btn.innerText = "İşleniyor...";
+        btn.disabled = true;
+        btn.innerText = "İşleniyor...";
 
+        const mode = document.getElementById('modeInput').value;
         const formData = new FormData();
-        formData.append('image', fileInput.files[0]);
-        formData.append('prompt', document.getElementById('prompt').value);
-        formData.append('model', document.getElementById('model').value);
-        formData.append('aspect_ratio', document.getElementById('aspect_ratio').value);
+        formData.append('mode', mode);
+
+        if (mode === 'video') {
+            const startFile = document.getElementById('image_video').files[0];
+            if (!startFile) { alert("Start frame seçmelisiniz"); btn.disabled = false; btn.innerText = "🎬 Video Oluştur"; return; }
+            formData.append('image', startFile);
+
+            const endFile = document.getElementById('end_image').files[0];
+            if (endFile) formData.append('end_image', endFile);
+
+            formData.append('prompt', document.getElementById('prompt_video').value);
+            formData.append('model', document.getElementById('video_model').value);
+            formData.append('aspect_ratio', 'cinema');
+            formData.append('video_duration', document.getElementById('video_duration').value);
+            formData.append('video_audio', document.getElementById('video_audio').checked ? 'true' : 'false');
+        } else {
+            const imgFile = document.getElementById('image').files[0];
+            if (!imgFile) { alert("Görsel seçmelisiniz"); btn.disabled = false; btn.innerText = "Render Başlat"; return; }
+            formData.append('image', imgFile);
+            formData.append('prompt', document.getElementById('prompt').value);
+            formData.append('model', document.getElementById('model').value);
+            formData.append('aspect_ratio', document.getElementById('aspect_ratio').value);
+        }
 
         try {
             const response = await fetch('/start_task', { method: 'POST', body: formData });
             const data = await response.json();
             if (data.task_id) {
-                createTaskBox(data.task_id, document.getElementById('prompt').value, "Başlıyor...");
+                const promptText = mode === 'video'
+                    ? document.getElementById('prompt_video').value
+                    : document.getElementById('prompt').value;
+                createTaskBox(data.task_id, promptText, "Başlıyor...", mode);
                 startPolling(data.task_id);
+                // Formu sıfırla
                 document.getElementById('generateForm').reset();
-                filePreview.style.display = 'none';
-                filePreview.src = '';
-                dropzoneContent.style.display = 'flex';
+                ['file-preview','start-preview','end-preview'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) { el.style.display = 'none'; el.src = ''; }
+                });
+                ['dropzone-content','dropzone-start-content','dropzone-end-content'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'flex';
+                });
             }
         } catch (err) { alert("Bağlantı hatası"); }
-        finally { btn.disabled = false; btn.innerText = "Render Başlat"; }
+        finally {
+            btn.disabled = false;
+            btn.innerText = mode === 'video' ? "🎬 Video Oluştur" : "Render Başlat";
+        }
     });
 
-    function showLatestResult(url) {
+    // ── Sonuç göster ─────────────────────────────────────────
+    function showLatestResult(url, type) {
         const img = document.getElementById('latestResult');
-        const ph = document.getElementById('resultPlaceholder');
-        img.src = url;
-        img.classList.add('visible');
+        const vid = document.getElementById('latestVideo');
+        const ph  = document.getElementById('resultPlaceholder');
         ph.style.display = 'none';
+
+        if (type === 'video') {
+            img.classList.remove('visible');
+            img.style.display = 'none';
+            vid.src = url;
+            vid.classList.add('visible');
+            vid.style.display = 'block';
+            vid.muted = false;
+            vid.play().catch(() => {});
+        } else {
+            vid.classList.remove('visible');
+            vid.style.display = 'none';
+            img.src = url;
+            img.classList.add('visible');
+            img.style.display = 'block';
+        }
     }
 
-    function createTaskBox(taskId, prompt, statusText) {
+    // ── Task kutusu ──────────────────────────────────────────
+    function createTaskBox(taskId, prompt, statusText, mode) {
         if (document.getElementById('task-' + taskId)) return;
+        const badgeClass = mode === 'video' ? 'task-mode-badge video' : 'task-mode-badge';
+        const badgeLabel = mode === 'video' ? 'VİDEO' : 'GÖRSEL';
         const html = `
             <div class="task-card" id="task-${taskId}">
                 <div class="task-top">
                     <div class="task-prompt">${prompt}</div>
+                    <span class="${badgeClass}">${badgeLabel}</span>
                     <button class="task-delete-btn" onclick="deleteTask('${taskId}')">×</button>
                 </div>
                 <div class="status-row">
@@ -697,12 +1029,20 @@
         try { await fetch('/delete_task/' + taskId, { method: 'DELETE' }); } catch(e) {}
     }
 
-    function addToGallery(taskId, url, prompt) {
+    // ── Galeri ───────────────────────────────────────────────
+    function addToGallery(taskId, url, prompt, type) {
         document.getElementById('emptyGalleryMsg').style.display = 'none';
         if (document.getElementById('gallery-item-' + taskId)) return;
+
+        const isVideo = type === 'video';
+        const mediaTag = isVideo
+            ? `<video src="${url}" loop muted playsinline autoplay></video><span class="gallery-video-badge">VIDEO</span>`
+            : `<img src="${url}" alt="${prompt}">`;
+        const itemClass = isVideo ? 'gallery-item video-item' : 'gallery-item';
+
         const html = `
-            <div class="gallery-item" id="gallery-item-${taskId}" title="${prompt}">
-                <img src="${url}" alt="${prompt}">
+            <div class="${itemClass}" id="gallery-item-${taskId}" title="${prompt}">
+                ${mediaTag}
                 <div class="item-actions">
                     <button class="action-btn" onclick="window.open('${url}', '_blank')">
                         <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -725,6 +1065,7 @@
         try { await fetch('/delete_task/' + taskId, { method: 'DELETE' }); } catch(e) {}
     }
 
+    // ── Polling ──────────────────────────────────────────────
     function startPolling(taskId) {
         if (activeIntervals[taskId]) return;
         activeIntervals[taskId] = setInterval(async () => {
@@ -734,18 +1075,17 @@
                 const data = await res.json();
 
                 const statusEl = document.getElementById('status-' + taskId);
-                const logsEl = document.getElementById('logs-' + taskId);
+                const logsEl   = document.getElementById('logs-' + taskId);
 
                 if (logsEl && data.logs) {
                     logsEl.innerHTML = data.logs.join('<br>');
                     logsEl.scrollTop = logsEl.scrollHeight;
                 }
-
                 if (statusEl) statusEl.innerText = data.status;
 
                 if (data.status === "Tamamlandı") {
-                    addToGallery(taskId, data.result_url, data.prompt);
-                    showLatestResult(data.result_url);
+                    addToGallery(taskId, data.result_url, data.prompt, data.result_type);
+                    showLatestResult(data.result_url, data.result_type);
                     const card = document.getElementById('task-' + taskId);
                     if (card) card.remove();
                     clearInterval(activeIntervals[taskId]);
