@@ -9,7 +9,7 @@ import threading
 import uuid
 import urllib.parse
 from urllib.parse import urlparse, parse_qs
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -41,14 +41,23 @@ MAGE_HEADERS_BASE = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
 }
 
-# ── Görsel Modelleri ───────────────────────────────────────
+# ── Görsel Modelleri (mageSpaceAI-with-video.py referansından) ──
+# Kombinasyonlar: architecture="guava"        , model_id="guava"
+#                 architecture="mango"        , model_id="mango-v3"
+#                 architecture="nano_banana_v2", model_id="nano_banana_v2"
+#                 architecture="mango"        , model_id="mango"
+#                 architecture="mango"        , model_id="mango-v2"
 MODELS = {
-    "mango": {"model_id": "mango-v2", "architecture": "mango", "resolution": "2K"},
-    "guava": {"model_id": "guava-pro", "architecture": "guava", "resolution": "1K"},
+    "mango-v2":       {"model_id": "mango-v2",       "architecture": "mango",          "resolution": "2K"},
+    "mango-v3":       {"model_id": "mango-v3",       "architecture": "mango",          "resolution": "2K"},
+    "mango":          {"model_id": "mango",           "architecture": "mango",          "resolution": "2K"},
+    "guava":          {"model_id": "guava",           "architecture": "guava",          "resolution": "1K"},
+    "nano_banana_v2": {"model_id": "nano_banana_v2",  "architecture": "nano_banana_v2", "resolution": "2K"},
 }
 
 # ── Video Modelleri ────────────────────────────────────────
-# Mevcut modeller: peach_max, kiwi (yorum satırlarından)
+# Kombinasyonlar: architecture="peach_max", model_id="peach_max"
+#                 architecture="kiwi"     , model_id="kiwi"
 VIDEO_MODELS = {
     "peach_max": {
         "model_id": "peach_max",
@@ -56,13 +65,12 @@ VIDEO_MODELS = {
         "aspect_ratio": "cinema",
         "peach_max_aspect_ratio": "16:9",
         "resolution": "480p",
-        # "resolution": "720p",  # alternatif
     },
     "kiwi": {
         "model_id": "kiwi",
         "architecture": "kiwi",
         "aspect_ratio": "landscape",
-        "peach_max_aspect_ratio": "16:9",
+        "kiwi_aspect_ratio": "16:9",
         "resolution": "480p",
     },
 }
@@ -110,13 +118,36 @@ def _creations_router_state_tree():
     tree = ["", {"children": ["creations", {"children": ["__PAGE__", {}, "/creations", "refresh"]}]}, None, None, True]
     return urllib.parse.quote(json.dumps(tree), safe='')
 
+def _parse_cdn_url(resp_text):
+    """Response text'inden CDN URL'sini parse et."""
+    for satir in resp_text.splitlines():
+        if satir.startswith("1:"):
+            deger = satir[2:].strip().strip('"')
+            if deger.startswith("http"):
+                return deger
+    m = re.search(r'"(https://cdn3\.mage\.space/uploads/[^"]+)"', resp_text)
+    if m:
+        return m.group(1)
+    return None
+
+def _file_to_data_uri(f):
+    """Flask FileStorage nesnesini data URI'ye dönüştür."""
+    mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+    image_bytes = f.read()
+    b64 = base64.b64encode(image_bytes).decode("utf-8")
+    ext = os.path.splitext(f.filename)[1].lower()
+    mime = mime_map.get(ext, "image/jpeg")
+    return f"data:{mime};base64,{b64}"
+
+
 # ── İşçi Fonksiyon ─────────────────────────────────────────
-def run_mage_task(task_id, data_uri, prompt, mode, model_key, aspect_ratio,
-                  end_data_uri=None, video_duration="5", video_audio=True):
+def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
+                  end_data_uri=None, video_duration="5", video_audio=True,
+                  video_format="16:9", nano_banana_v2_aspect_ratio=None):
     """
-    mode: "image" veya "video"
-    model_key: görsel modları için MODELS anahtarı, video için VIDEO_MODELS anahtarı
-    end_data_uri: video end-frame data URI (opsiyonel)
+    data_uris: list of data URIs
+      - image modu: ilk=ana referans, geri kalanlar=additional_images
+      - video modu: tek eleman (start frame)
     """
     try:
         if task_id not in tasks: return
@@ -222,35 +253,35 @@ def run_mage_task(task_id, data_uri, prompt, mode, model_key, aspect_ratio,
         h_11 = {**MAGE_HEADERS_BASE, "next-action": "403d0eb104c134d56b2406261bf1fb90279d3f8030", "next-router-state-tree": _settings_router_state_tree(), "referer": "https://www.mage.space/settings"}
         session.post("https://www.mage.space/settings", headers=h_11, data=json.dumps([{"rating": "M+", "moderation": ["suggestive", "nudity", "violence", "nsfw"]}]))
 
-        # ── ADIM 12: Start frame yükle ──────────────────────
-        log_task(task_id, "📤 ADIM 12: Start frame yükleniyor...")
-        payload_12 = json.dumps([data_uri, local_id])
+        # ── ADIM 12: Tüm resimleri yükle ────────────────────
         h_12 = {**MAGE_HEADERS_BASE, "next-action": "60b80f08a867ba84df1c0c9354a85ae5eccc3f9f31", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
-        resp_12 = session.post("https://www.mage.space/explore", headers=h_12, data=payload_12.encode("utf-8"))
 
-        cdn_url = None
-        for satir in resp_12.text.splitlines():
-            if satir.startswith("1:"):
-                deger = satir[2:].strip().strip('"')
-                if deger.startswith("http"): cdn_url = deger; break
-        if not cdn_url:
-            m = re.search(r'"(https://cdn3\.mage\.space/uploads/[^"]+)"', resp_12.text)
-            if m: cdn_url = m.group(1)
-        if not cdn_url: raise Exception("Start frame CDN URL alınamadı.")
+        cdn_urls = []
+        for i, duri in enumerate(data_uris):
+            log_task(task_id, f"📤 ADIM 12: Resim {i+1}/{len(data_uris)} yükleniyor...")
+            payload_12 = json.dumps([duri, local_id])
+            resp_12 = session.post("https://www.mage.space/explore", headers=h_12, data=payload_12.encode("utf-8"), timeout=120)
+            cdn_url = _parse_cdn_url(resp_12.text)
+            if cdn_url:
+                cdn_urls.append(cdn_url)
+                log_task(task_id, f"✅ CDN URL alındı ({i+1})")
+            else:
+                log_task(task_id, f"⚠️ Resim {i+1} yüklenemedi, atlandı.")
+
+        if not cdn_urls:
+            raise Exception("Hiçbir resim yüklenemedi.")
+
+        main_cdn = cdn_urls[0]
+        additional_cdns = cdn_urls[1:] if len(cdn_urls) > 1 else []
+        log_task(task_id, f"✅ Toplam {len(cdn_urls)} resim yüklendi")
 
         # ── ADIM 12b: End frame yükle (sadece video) ────────
         cdn_url_end = None
         if mode == "video" and end_data_uri:
             log_task(task_id, "📤 ADIM 12b: End frame yükleniyor...")
             payload_12b = json.dumps([end_data_uri, local_id])
-            resp_12b = session.post("https://www.mage.space/explore", headers=h_12, data=payload_12b.encode("utf-8"))
-            for satir in resp_12b.text.splitlines():
-                if satir.startswith("1:"):
-                    deger = satir[2:].strip().strip('"')
-                    if deger.startswith("http"): cdn_url_end = deger; break
-            if not cdn_url_end:
-                m = re.search(r'"(https://cdn3\.mage\.space/uploads/[^"]+)"', resp_12b.text)
-                if m: cdn_url_end = m.group(1)
+            resp_12b = session.post("https://www.mage.space/explore", headers=h_12, data=payload_12b.encode("utf-8"), timeout=120)
+            cdn_url_end = _parse_cdn_url(resp_12b.text)
             if cdn_url_end:
                 log_task(task_id, "✅ End frame CDN URL alındı.")
             else:
@@ -262,41 +293,68 @@ def run_mage_task(task_id, data_uri, prompt, mode, model_key, aspect_ratio,
         if mode == "video":
             video_cfg = VIDEO_MODELS.get(model_key, VIDEO_MODELS["peach_max"])
             log_task(task_id, f"🎬 ADIM 13: Video üretimi başlıyor ({video_cfg['model_id']})...")
+
+            # aspect_ratio mapping: video_format → genel aspect_ratio
+            format_to_aspect = {"16:9": "cinema", "9:16": "portrait", "1:1": "square"}
+            general_aspect = format_to_aspect.get(video_format, "cinema")
+
+            arch_config = {
+                "seed": None,
+                "audio": video_audio,
+                "prompt": prompt,
+                "duration": str(video_duration),
+                "model_id": video_cfg["model_id"],
+                "fast_mode": True,
+                "resolution": video_cfg["resolution"],
+                "architecture": video_cfg["architecture"],
+                "aspect_ratio": general_aspect,
+                "image": main_cdn,
+                "additional_images": [cdn_url_end] if cdn_url_end else None,
+                "last_image": cdn_url_end if cdn_url_end else "$undefined",
+            }
+            # Mimari bazlı ek aspect ratio parametresi
+            if video_cfg["architecture"] == "peach_max":
+                arch_config["peach_max_aspect_ratio"] = video_format
+            elif video_cfg["architecture"] == "kiwi":
+                arch_config["kiwi_aspect_ratio"] = video_format
+
             payload_13 = [{
-                "architectureConfig": {
-                    "seed": None,
-                    "audio": video_audio,
-                    "prompt": prompt,
-                    "duration": str(video_duration),
-                    "model_id": video_cfg["model_id"],
-                    "fast_mode": True,
-                    "resolution": video_cfg["resolution"],
-                    "architecture": video_cfg["architecture"],
-                    "aspect_ratio": video_cfg.get("aspect_ratio", aspect_ratio),
-                    "peach_max_aspect_ratio": video_cfg.get("peach_max_aspect_ratio", "16:9"),
-                    "image": cdn_url,
-                    "additional_images": [cdn_url_end] if cdn_url_end else None,
-                    "last_image": cdn_url_end if cdn_url_end else "$undefined",
-                },
+                "architectureConfig": arch_config,
                 "architectureConfigToSave": "$0:0:architectureConfig",
                 "authToken": id_token,
                 "conceptId": None,
                 "activePowerPack": None,
             }]
         else:
-            model_config = MODELS.get(model_key, MODELS["mango"])
+            model_config = MODELS.get(model_key, MODELS["mango-v2"])
             log_task(task_id, f"🎨 ADIM 13: Görsel üretimi başlıyor ({model_config['model_id']})...")
+
+            arch_config = {
+                "seed": None,
+                "prompt": prompt,
+                "model_id": model_config["model_id"],
+                "fast_mode": True,
+                "resolution": model_config["resolution"],
+                "architecture": model_config["architecture"],
+                "aspect_ratio": aspect_ratio,
+                "prompt_extend": False,
+                "additional_images": additional_cdns if additional_cdns else [],
+                "image": main_cdn,
+            }
+            # Sadece nano_banana_v2 mimarisinde kullanılır
+            if model_config["architecture"] == "nano_banana_v2" and nano_banana_v2_aspect_ratio:
+                arch_config["nano_banana_v2_aspect_ratio"] = nano_banana_v2_aspect_ratio
+
             payload_13 = [{
-                "architectureConfig": {
-                    "seed": None, "prompt": prompt, "model_id": model_config['model_id'], "fast_mode": True,
-                    "resolution": model_config['resolution'], "architecture": model_config['architecture'],
-                    "aspect_ratio": aspect_ratio, "prompt_extend": False, "additional_images": [], "image": cdn_url,
-                },
-                "architectureConfigToSave": "$0:0:architectureConfig", "authToken": id_token, "conceptId": None, "activePowerPack": None,
+                "architectureConfig": arch_config,
+                "architectureConfigToSave": "$0:0:architectureConfig",
+                "authToken": id_token,
+                "conceptId": None,
+                "activePowerPack": None,
             }]
 
         h_13 = {**MAGE_HEADERS_BASE, "next-action": "40b4e3d260af5ec332817cad1adf8470dbac10537b", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
-        resp_13 = session.post("https://www.mage.space/explore", headers=h_13, data=json.dumps(payload_13).encode("utf-8"))
+        resp_13 = session.post("https://www.mage.space/explore", headers=h_13, data=json.dumps(payload_13).encode("utf-8"), timeout=120)
 
         h_match = re.search(r'"history_id":"([^"]+)"', resp_13.text)
         if not h_match: raise Exception("History ID alınamadı.")
@@ -313,7 +371,7 @@ def run_mage_task(task_id, data_uri, prompt, mode, model_key, aspect_ratio,
         result_url = None
         for _ in range(60):
             if task_id not in tasks: return
-            resp_14 = session.post(url_14, headers=h_14, data=payload_14)
+            resp_14 = session.post(url_14, headers=h_14, data=payload_14, timeout=30)
             if history_id in resp_14.text:
                 for line in resp_14.text.splitlines():
                     if line.startswith("1:"):
@@ -323,7 +381,6 @@ def run_mage_task(task_id, data_uri, prompt, mode, model_key, aspect_ratio,
                                 if h.get("id") == history_id:
                                     if h.get("status") == "success":
                                         data_block = h.get("result", {}).get("data", {})
-                                        # Video önce, sonra image kontrol et
                                         result_url = data_block.get("video") or data_block.get("image")
                                     elif h.get("status") == "failed":
                                         raise Exception("Üretim başarısız oldu!")
@@ -332,7 +389,6 @@ def run_mage_task(task_id, data_uri, prompt, mode, model_key, aspect_ratio,
                             pass
 
             if not result_url:
-                # regex fallback (hem video hem image)
                 vid_match = re.search(r'"video":"(https://cdn3\.mage\.space/[^"]+)"', resp_14.text)
                 img_match = re.search(r'"image":"(https://cdn3\.mage\.space/temp/[^"]+)"', resp_14.text)
                 if vid_match: result_url = vid_match.group(1)
@@ -360,39 +416,52 @@ def index():
 
 @app.route('/start_task', methods=['POST'])
 def start_task():
-    if 'image' not in request.files:
-        return jsonify({"error": "Start frame eksik"}), 400
-
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({"error": "Dosya seçilmedi"}), 400
-
     prompt       = request.form.get('prompt', 'hello')
-    mode         = request.form.get('mode', 'image')          # "image" veya "video"
-    model        = request.form.get('model', 'mango')
+    mode         = request.form.get('mode', 'image')
+    model        = request.form.get('model', 'mango-v2')
     aspect_ratio = request.form.get('aspect_ratio', 'portrait')
 
     # Video'ya özgü parametreler
     video_duration = request.form.get('video_duration', '5')
     video_audio    = request.form.get('video_audio', 'true').lower() == 'true'
+    video_format   = request.form.get('video_format', '16:9')
 
-    # Start frame → data URI
-    image_bytes = file.read()
-    b64_image = base64.b64encode(image_bytes).decode("utf-8")
-    ext = os.path.splitext(file.filename)[1].lower()
-    mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
-    mime = mime_map.get(ext, "image/jpeg")
-    data_uri = f"data:{mime};base64,{b64_image}"
+    # nano_banana_v2'ye özel
+    nano_banana_v2_aspect_ratio = request.form.get('nano_banana_v2_aspect_ratio', None)
 
-    # End frame (opsiyonel, sadece video modunda)
+    data_uris = []
     end_data_uri = None
-    if mode == "video" and 'end_image' in request.files:
-        end_file = request.files['end_image']
-        if end_file and end_file.filename != '':
-            end_bytes = end_file.read()
-            end_ext   = os.path.splitext(end_file.filename)[1].lower()
-            end_mime  = mime_map.get(end_ext, "image/jpeg")
-            end_data_uri = f"data:{end_mime};base64,{base64.b64encode(end_bytes).decode('utf-8')}"
+
+    if mode == "video":
+        # Start frame
+        if 'image' not in request.files:
+            return jsonify({"error": "Start frame eksik"}), 400
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({"error": "Dosya seçilmedi"}), 400
+        data_uris.append(_file_to_data_uri(file))
+
+        # End frame (opsiyonel)
+        if 'end_image' in request.files:
+            end_file = request.files['end_image']
+            if end_file and end_file.filename != '':
+                end_data_uri = _file_to_data_uri(end_file)
+    else:
+        # Çoklu resim desteği (maks 10)
+        files = request.files.getlist('images')
+        if not files or all(f.filename == '' for f in files):
+            # Fallback: tekil 'image' alanı
+            if 'image' in request.files:
+                file = request.files['image']
+                if file.filename != '':
+                    data_uris.append(_file_to_data_uri(file))
+        else:
+            for f in files[:10]:
+                if f.filename != '':
+                    data_uris.append(_file_to_data_uri(f))
+
+    if not data_uris:
+        return jsonify({"error": "En az 1 dosya yüklenmeli"}), 400
 
     task_id = str(uuid.uuid4())
     with task_lock:
@@ -408,7 +477,8 @@ def start_task():
 
     thread = threading.Thread(
         target=run_mage_task,
-        args=(task_id, data_uri, prompt, mode, model, aspect_ratio, end_data_uri, video_duration, video_audio)
+        args=(task_id, data_uris, prompt, mode, model, aspect_ratio,
+              end_data_uri, video_duration, video_audio, video_format, nano_banana_v2_aspect_ratio)
     )
     thread.daemon = True
     thread.start()
@@ -433,6 +503,19 @@ def delete_task(task_id):
             del tasks[task_id]
             return jsonify({"success": True})
     return jsonify({"error": "Görev bulunamadı"}), 404
+
+@app.route('/proxy_image')
+def proxy_image():
+    """CDN görsellerini proxy'le (CORS sorunu çözmek için)."""
+    url = request.args.get('url', '')
+    if not url:
+        return jsonify({"error": "URL gerekli"}), 400
+    try:
+        resp = requests.get(url, timeout=30)
+        content_type = resp.headers.get('content-type', 'image/jpeg')
+        return Response(resp.content, mimetype=content_type)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000, threaded=True)
