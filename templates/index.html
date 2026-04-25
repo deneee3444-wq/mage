@@ -1,1283 +1,1271 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cinematic Studio</title>
-    <meta name="description" content="AI-powered cinematic image and video generation studio">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAGE STUDIO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        :root {
-            --bg: #080810;
-            --surface: #0e0e1a;
-            --surface2: #14141f;
-            --surface3: #1a1a28;
-            --border: rgba(255,255,255,0.07);
-            --border-hover: rgba(255,255,255,0.14);
-            --accent: #7c6fe0;
-            --accent2: #a78bfa;
-            --accent-glow: rgba(124,111,224,0.18);
-            --accent-video: #e06f6f;
-            --accent-video2: #f87171;
-            --accent-video-glow: rgba(224,111,111,0.18);
-            --text: #e8e6f0;
-            --muted: #6e6e88;
-            --muted2: #9898b0;
-            --danger: #ef4444;
-            --success: #22c55e;
-            --font: 'Inter', sans-serif;
-        }
+:root {
+  --bg: #050507; --surface: #0d0d12; --card: #111118;
+  --border: #1e1e2a; --accent: #c8ff00; --accent2: #ff4d6d;
+  --text: #e8e8f0; --muted: #5a5a72;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
 
-        html, body { height: 100%; overflow: hidden; }
+html, body { height: 100%; overflow: hidden; max-width: 100%; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); overflow-x: hidden; }
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.6;
+}
 
-        body {
-            font-family: var(--font);
-            background: var(--bg);
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-        }
+/* ── LOGIN ── */
+.login-wrap {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center; padding: 2rem;
+  background: var(--bg);
+}
+.login-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 2.5rem 2rem; width: 100%; max-width: 360px;
+  display: flex; flex-direction: column; gap: 1.5rem;
+}
+.login-logo { font-family: var(--font-display); font-size: 2rem; letter-spacing: 0.2em; color: var(--accent); text-shadow: 0 0 30px rgba(200,255,0,0.35); text-align: center; }
+.login-logo span { color: var(--text); }
+.login-sub { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.15em; color: var(--muted); text-align: center; text-transform: uppercase; margin-top: -1rem; }
+.login-field { display: flex; flex-direction: column; gap: 0.5rem; }
+.login-field label { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+.login-field input { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-family: var(--font-mono); font-size: 0.95rem; padding: 0.7rem 1rem; outline: none; transition: border-color 0.2s; width: 100%; letter-spacing: 0.2em; }
+.login-field input:focus { border-color: var(--accent); }
+.login-btn { width: 100%; padding: 0.75rem; background: var(--accent); color: #000; border: none; border-radius: 6px; font-family: var(--font-display); font-size: 1.1rem; letter-spacing: 0.2em; cursor: pointer; transition: all 0.2s; }
+.login-btn:hover { box-shadow: 0 8px 30px rgba(200,255,0,0.3); transform: translateY(-1px); }
+.login-error { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em; color: var(--accent2); text-align: center; padding: 0.5rem; background: rgba(255,77,109,0.08); border: 1px solid rgba(255,77,109,0.2); border-radius: 4px; }
 
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+/* ── Header ── */
+header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 52px; background: rgba(5,5,7,0.92); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+.logo { font-family: var(--font-display); font-size: 1.45rem; letter-spacing: 0.15em; color: var(--accent); text-shadow: 0 0 28px rgba(200,255,0,0.35); white-space: nowrap; }
+.logo span { color: var(--text); }
+.header-right { display: flex; align-items: center; gap: 0.75rem; }
+.header-badge { font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted); border: 1px solid var(--border); padding: 3px 9px; border-radius: 2px; letter-spacing: 0.1em; white-space: nowrap; }
+.logout-btn { font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted); border: 1px solid var(--border); padding: 3px 9px; border-radius: 2px; letter-spacing: 0.1em; cursor: pointer; background: none; text-decoration: none; transition: all 0.15s; white-space: nowrap; }
+.logout-btn:hover { border-color: var(--accent2); color: var(--accent2); }
 
-        /* ─── NAV ─── */
-        .navbar {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 24px; height: 54px;
-            background: rgba(8,8,16,0.97);
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0; position: relative; z-index: 10;
-        }
-        .navbar::after {
-            content: ''; position: absolute;
-            bottom: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(124,111,224,0.45), transparent);
-        }
-        .logo { display: flex; align-items: center; gap: 9px; }
-        .logo-icon {
-            width: 28px; height: 28px;
-            background: linear-gradient(135deg, var(--accent), #4f46e5);
-            border-radius: 7px;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .logo-icon svg { width: 14px; height: 14px; fill: #fff; }
-        .logo-text { font-size: 0.9rem; font-weight: 600; color: #fff; white-space: nowrap; }
-        .logo-text span { color: var(--accent2); font-weight: 400; }
+/* ── Layout ── */
+.wrapper { display: grid; grid-template-columns: 380px 1fr; height: 100vh; padding-top: 52px; position: relative; z-index: 1; max-width: 100%; overflow-x: hidden; }
 
-        .nav-tabs {
-            display: flex; align-items: center; gap: 2px;
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 9px; padding: 3px;
-        }
-        .tab-btn {
-            background: transparent; border: none; color: var(--muted2);
-            padding: 6px 13px; border-radius: 6px; cursor: pointer;
-            font-size: 0.78rem; font-weight: 500; font-family: var(--font);
-            transition: all 0.2s;
-            display: flex; align-items: center; gap: 5px; white-space: nowrap;
-        }
-        .tab-btn svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
-        .tab-btn:hover { color: var(--text); background: var(--surface2); }
-        .tab-btn.active {
-            background: linear-gradient(135deg, rgba(124,111,224,0.22), rgba(79,70,229,0.14));
-            color: var(--accent2); border: 1px solid rgba(124,111,224,0.25);
-        }
+/* ── Left panel ── */
+.panel { background: var(--surface); border-right: 1px solid var(--border); padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; height: calc(100vh - 52px); overflow-y: auto; overflow-x: hidden; }
+.panel::-webkit-scrollbar { width: 3px; }
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-        /* ─── MAIN ─── */
-        .main { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 18px 20px; }
-        .tab-pane { display: none; animation: fadeUp 0.2s ease; }
-        .tab-pane.active { display: block; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+/* ── Mode toggle ── */
+.mode-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+.mode-btn { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.12em; padding: 0.55rem 0.5rem; background: var(--card); color: var(--muted); border: none; cursor: pointer; transition: all 0.15s; text-transform: uppercase; }
+.mode-btn:not(:last-child) { border-right: 1px solid var(--border); }
+.mode-btn.active { background: var(--accent); color: #000; font-weight: 600; }
 
-        /* ─── STUDIO: 3 COLUMN (Form | Result | Tasks) ─── */
-        .studio-layout {
-            display: grid;
-            grid-template-columns: minmax(300px, 1fr) minmax(300px, 1.2fr) minmax(260px, 0.8fr);
-            gap: 14px;
-            max-width: 1500px;
-            margin: 0 auto;
-            height: calc(100vh - 54px - 36px);
-        }
-        .studio-col { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
-        .studio-col-scroll { overflow-y: auto; flex: 1; min-height: 0; }
+/* ── Image areas ── */
+.image-area { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: var(--card); }
+.image-area.full-width { aspect-ratio: 4/3; }
 
-        @media (max-width: 1100px) {
-            .studio-layout { grid-template-columns: 1fr 1fr; height: auto; }
-            .studio-col-tasks { grid-column: 1 / -1; max-height: 350px; }
-        }
-        @media (max-width: 700px) {
-            .studio-layout { grid-template-columns: 1fr; height: auto; }
-            .studio-col-tasks { max-height: 300px; }
-        }
+.dropzone { position: absolute; inset: 0; border: 1.5px dashed var(--border); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; cursor: pointer; transition: all 0.2s; background: var(--card); text-align: center; padding: 0.75rem; }
+.dropzone:hover, .dropzone.drag-over { border-color: var(--accent); background: rgba(200,255,0,0.03); }
+.dropzone input { display: none; }
+.drop-icon { font-size: 1.3rem; line-height: 1; }
+.drop-text { font-size: 0.7rem; color: var(--muted); line-height: 1.4; }
+.drop-text strong { color: var(--accent); }
 
-        /* ─── CARD ─── */
-        .card {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 13px; padding: 18px;
-        }
-        .card-header {
-            display: flex; align-items: center; gap: 9px;
-            margin-bottom: 16px; padding-bottom: 14px;
-            border-bottom: 1px solid var(--border);
-        }
-        .card-header-icon {
-            width: 30px; height: 30px;
-            background: var(--accent-glow); border: 1px solid rgba(124,111,224,0.2);
-            border-radius: 8px;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .card-header-icon svg { width: 14px; height: 14px; stroke: var(--accent2); fill: none; stroke-width: 1.8; }
-        .card-title { font-size: 0.86rem; font-weight: 500; color: var(--text); }
-        .card-subtitle { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
+/* ── Multi-image grid preview ── */
+.img-preview-outer { display: none; position: absolute; inset: 0; background: var(--card); }
+.img-preview-outer.visible { display: block; }
+.img-grid-preview { display: grid; width: 100%; height: 100%; }
+.img-grid-preview.c1 { grid-template-columns: 1fr; }
+.img-grid-preview.c2 { grid-template-columns: 1fr 1fr; }
+.img-grid-preview.c3 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.img-grid-preview.c4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.img-grid-thumb { overflow: hidden; position: relative; }
+.img-grid-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* 3 images: first child spans 2 rows */
+.img-grid-preview.c3 .img-grid-thumb:first-child { grid-row: 1 / 3; }
 
-        /* ─── MODE TOGGLE ─── */
-        .mode-toggle {
-            display: flex; gap: 3px; background: var(--surface2);
-            border: 1px solid var(--border); border-radius: 8px;
-            padding: 3px; margin-bottom: 14px;
-        }
-        .mode-btn {
-            flex: 1; background: transparent; border: none; color: var(--muted2);
-            padding: 7px 10px; border-radius: 6px; cursor: pointer;
-            font-size: 0.78rem; font-weight: 500; font-family: var(--font);
-            transition: all 0.2s;
-            display: flex; align-items: center; justify-content: center; gap: 5px;
-        }
-        .mode-btn svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
-        .mode-btn:hover { color: var(--text); }
-        .mode-btn.active-image {
-            background: linear-gradient(135deg, rgba(124,111,224,0.22), rgba(79,70,229,0.14));
-            color: var(--accent2); border: 1px solid rgba(124,111,224,0.25);
-        }
-        .mode-btn.active-video {
-            background: linear-gradient(135deg, rgba(224,111,111,0.22), rgba(229,70,70,0.14));
-            color: var(--accent-video2); border: 1px solid rgba(224,111,111,0.25);
-        }
+.preview-wrap { display: none; position: absolute; inset: 0; }
+.preview-wrap.visible { display: block; }
+.preview-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.preview-remove { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.75); border: 1px solid var(--border); color: var(--text); width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; transition: background 0.15s; z-index: 5; }
+.preview-remove:hover { background: var(--accent2); }
+.frame-badge { position: absolute; bottom: 6px; left: 6px; display: none; background: rgba(200,255,0,0.15); border: 1px solid rgba(200,255,0,0.35); color: var(--accent); font-family: var(--font-mono); font-size: 0.56rem; letter-spacing: 0.08em; padding: 2px 7px; border-radius: 2px; z-index: 2; }
 
-        /* ─── FORM ─── */
-        .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-        .field label {
-            font-size: 0.68rem; font-weight: 500; color: var(--muted2);
-            text-transform: uppercase; letter-spacing: 0.6px;
-        }
-        .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-        .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+/* ── Fields ── */
+.field { display: flex; flex-direction: column; gap: 0.3rem; }
+label { font-family: var(--font-mono); font-size: 0.63rem; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
 
-        input[type="text"], textarea, select {
-            width: 100%; padding: 10px 12px;
-            background: var(--surface2); color: var(--text);
-            border: 1px solid var(--border); border-radius: 8px;
-            font-size: 0.83rem; font-family: var(--font);
-            outline: none; transition: border-color 0.2s, background 0.2s;
-            appearance: none;
-        }
-        textarea { resize: vertical; min-height: 60px; }
-        input[type="text"]::placeholder, textarea::placeholder { color: var(--muted); }
-        input[type="text"]:focus, textarea:focus, select:focus {
-            border-color: rgba(124,111,224,0.5); background: var(--surface3);
-            box-shadow: 0 0 0 3px rgba(124,111,224,0.07);
-        }
-        select {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%236e6e88' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-            background-repeat: no-repeat; background-position: right 10px center;
-            padding-right: 28px; cursor: pointer;
-        }
-        select option { background: #1a1a28; color: var(--text); }
+/* ── Textarea: fixed height + scrollbar ── */
+textarea {
+  background: var(--card); border: 1px solid var(--border); color: var(--text);
+  border-radius: 6px; font-family: var(--font-body); font-size: 0.875rem;
+  padding: 0.6rem 0.85rem; transition: border-color 0.2s; outline: none; width: 100%;
+  resize: none; height: 88px; overflow-y: auto; line-height: 1.55;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+textarea:focus { border-color: var(--accent); }
+textarea::-webkit-scrollbar { width: 4px; }
+textarea::-webkit-scrollbar-track { background: transparent; }
+textarea::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-        /* ─── TOGGLE ─── */
-        .toggle-row {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 8px 10px; background: var(--surface2);
-            border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px;
-        }
-        .toggle-label { font-size: 0.8rem; color: var(--muted2); }
-        .toggle { position: relative; width: 34px; height: 18px; flex-shrink: 0; }
-        .toggle input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute; cursor: pointer; inset: 0;
-            background: var(--surface3); border: 1px solid var(--border);
-            border-radius: 18px; transition: 0.2s;
-        }
-        .slider:before {
-            content: ''; position: absolute;
-            width: 12px; height: 12px; left: 2px; bottom: 2px;
-            background: var(--muted); border-radius: 50%; transition: 0.2s;
-        }
-        input:checked + .slider { background: rgba(224,111,111,0.2); border-color: rgba(224,111,111,0.35); }
-        input:checked + .slider:before { transform: translateX(16px); background: var(--accent-video2); }
+select { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-family: var(--font-body); font-size: 0.875rem; padding: 0.6rem 0.85rem; outline: none; width: 100%; transition: border-color 0.2s; cursor: pointer; }
+select:focus { border-color: var(--accent); }
 
-        /* ─── MULTI-IMAGE UPLOAD ─── */
-        .multi-image-zone {
-            border: 1.5px dashed rgba(124,111,224,0.25); border-radius: 9px;
-            background: rgba(124,111,224,0.04); padding: 10px;
-            min-height: 85px; display: flex; flex-wrap: wrap; gap: 8px;
-            align-items: center; transition: border-color 0.2s, background 0.2s;
-            position: relative;
-        }
-        .multi-image-zone:hover { border-color: rgba(124,111,224,0.4); background: rgba(124,111,224,0.07); }
-        .multi-image-zone.dragover { border-color: var(--accent2); background: rgba(124,111,224,0.12); }
-        .img-thumb {
-            width: 62px; height: 62px; border-radius: 7px; overflow: hidden;
-            position: relative; border: 1px solid var(--border); flex-shrink: 0;
-        }
-        .img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .img-thumb .thumb-remove {
-            position: absolute; top: 2px; right: 2px;
-            width: 18px; height: 18px; border-radius: 50%;
-            background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.2);
-            color: #fff; font-size: 11px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.15s; line-height: 1;
-        }
-        .img-thumb:hover .thumb-remove { opacity: 1; }
-        .add-image-btn {
-            width: 62px; height: 62px; border-radius: 7px;
-            border: 1.5px dashed rgba(124,111,224,0.3);
-            background: rgba(124,111,224,0.06);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 3px; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
-        }
-        .add-image-btn:hover { border-color: var(--accent2); background: rgba(124,111,224,0.12); }
-        .add-image-btn svg { width: 18px; height: 18px; stroke: var(--accent2); fill: none; stroke-width: 2; }
-        .add-image-btn span { font-size: 0.55rem; color: var(--muted2); }
-        .multi-image-hint { width: 100%; font-size: 0.65rem; color: var(--muted); text-align: center; padding: 4px 0; }
+/* ── Pills ── */
+.toggle-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.toggle-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.pills { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.pill { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 3px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; user-select: none; }
+.pill:hover { border-color: var(--accent); color: var(--accent); }
+.pill.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
 
-        /* ─── DROPZONE ─── */
-        .dropzone {
-            height: 85px; border: 1.5px dashed rgba(124,111,224,0.25); border-radius: 9px;
-            background: rgba(124,111,224,0.04); position: relative; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden; transition: border-color 0.2s, background 0.2s;
-        }
-        .dropzone.video-dz { border-color: rgba(224,111,111,0.25); background: rgba(224,111,111,0.04); }
-        .dropzone:hover { border-color: rgba(124,111,224,0.5); background: rgba(124,111,224,0.08); }
-        .dropzone.video-dz:hover { border-color: rgba(224,111,111,0.5); background: rgba(224,111,111,0.08); }
-        .dropzone-inner { display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; }
-        .dz-icon {
-            width: 24px; height: 24px; background: var(--accent-glow);
-            border: 1px solid rgba(124,111,224,0.2); border-radius: 6px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .dz-icon.video-icon { background: var(--accent-video-glow); border-color: rgba(224,111,111,0.2); }
-        .dz-icon svg { width: 11px; height: 11px; stroke: var(--accent2); fill: none; stroke-width: 1.8; }
-        .dz-icon.video-icon svg { stroke: var(--accent-video2); }
-        .dz-label { font-size: 0.7rem; color: var(--muted2); }
-        .dz-hint { font-size: 0.58rem; color: var(--muted); }
-        .dz-file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; z-index: 2; }
-        .dz-preview { display: none; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; z-index: 1; }
-        .frames-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-        .frame-label { font-size: 0.64rem; font-weight: 500; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; }
+/* ── Model cards ── */
+.model-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+.model-card { border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.55rem; cursor: pointer; transition: all 0.15s; background: var(--card); }
+.model-card:hover { border-color: var(--muted); }
+.model-card.active { border-color: var(--accent); background: rgba(200,255,0,0.05); }
+.mc-name { font-family: var(--font-mono); font-size: 0.6rem; color: var(--accent); letter-spacing: 0.08em; margin-bottom: 2px; }
+.mc-desc { font-size: 0.6rem; color: var(--muted); line-height: 1.3; }
 
-        /* ─── SUBMIT ─── */
-        .submit-btn {
-            width: 100%; padding: 11px; margin-top: 4px;
-            background: linear-gradient(135deg, var(--accent), #4f46e5);
-            color: #fff; border: none; border-radius: 8px; cursor: pointer;
-            font-weight: 600; font-size: 0.84rem; font-family: var(--font);
-            transition: opacity 0.2s, transform 0.15s;
-        }
-        .submit-btn.video-mode { background: linear-gradient(135deg, var(--accent-video), #b91c1c); }
-        .submit-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
-        .submit-btn:active:not(:disabled) { transform: scale(0.99); }
-        .submit-btn:disabled { background: var(--surface3); color: var(--muted); cursor: not-allowed; }
+/* ── Audio toggle ── */
+.audio-row { display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; background: var(--card); border: 1px solid var(--border); border-radius: 6px; }
+.audio-label { font-family: var(--font-mono); font-size: 0.63rem; letter-spacing: 0.1em; color: var(--muted); }
+.toggle-switch { position: relative; width: 36px; height: 20px; cursor: pointer; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: var(--border); border-radius: 20px; transition: 0.2s; }
+.toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; bottom: 3px; background: var(--muted); border-radius: 50%; transition: 0.2s; }
+.toggle-switch input:checked + .toggle-slider { background: rgba(200,255,0,0.25); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--accent); }
 
-        /* ─── RESULT ─── */
-        .result-box {
-            border-radius: 9px; overflow: hidden;
-            border: 1px solid var(--border); background: var(--surface2);
-            aspect-ratio: 16/10;
-            display: flex; align-items: center; justify-content: center;
-            position: relative;
-        }
-        .result-box img, .result-box video { width: 100%; height: 100%; object-fit: contain; display: none; }
-        .result-box img.visible, .result-box video.visible { display: block; }
-        .result-placeholder { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 20px; }
-        .rp-icon { width: 38px; height: 38px; border-radius: 9px; background: var(--surface3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
-        .rp-icon svg { width: 16px; height: 16px; stroke: var(--muted); fill: none; stroke-width: 1.5; }
-        .rp-text { font-size: 0.75rem; color: var(--muted); line-height: 1.6; }
+/* ── Nano AR row ── */
+.nano-ar-row { display: none; flex-direction: column; gap: 0.35rem; }
+.nano-ar-row.visible { display: flex; }
 
-        .use-ref-btn {
-            position: absolute; bottom: 8px; right: 8px;
-            background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.15);
-            padding: 6px 10px; border-radius: 6px; cursor: pointer;
-            display: none; align-items: center; gap: 5px;
-            font-size: 0.68rem; color: #fff; font-family: var(--font);
-            transition: background 0.15s; z-index: 5; backdrop-filter: blur(4px);
-        }
-        .use-ref-btn svg { width: 12px; height: 12px; stroke: #fff; fill: none; stroke-width: 2; }
-        .use-ref-btn:hover { background: rgba(124,111,224,0.5); }
-        .result-box:hover .use-ref-btn { display: flex; }
+/* ── Generate btn ── */
+.btn-generate { width: 100%; padding: 0.65rem; background: var(--accent); color: #000; border: none; border-radius: 6px; font-family: var(--font-display); font-size: 1rem; letter-spacing: 0.15em; cursor: pointer; transition: all 0.2s; margin-top: auto; flex-shrink: 0; }
+.btn-generate:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(200,255,0,0.25); }
+.btn-generate:active { transform: translateY(0); }
+.btn-generate:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
 
-        /* ─── TASKS (right column, scrollable) ─── */
-        .tasks-header {
-            display: flex; align-items: center; gap: 8px;
-            padding: 12px 14px;
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 10px 10px 0 0;
-            border-bottom: none;
-        }
-        .tasks-header-icon { font-size: 0.85rem; }
-        .tasks-header-title { font-size: 0.78rem; font-weight: 500; color: var(--text); }
-        .tasks-header-count { font-size: 0.65rem; color: var(--muted); margin-left: auto; }
+/* ── Section visibility ── */
+.video-only { display: none; }
+.image-only { display: flex; flex-direction: column; gap: 0.75rem; }
+.is-video .video-only { display: flex; flex-direction: column; gap: 0.75rem; }
+.is-video .image-only { display: none; }
 
-        .tasks-scroll {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            padding: 10px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-top: none;
-            border-radius: 0 0 10px 10px;
-            min-height: 100px;
-        }
-        .tasks-empty {
-            display: flex; flex-direction: column; align-items: center;
-            gap: 6px; padding: 30px 10px; text-align: center;
-        }
-        .tasks-empty-icon { font-size: 1.2rem; opacity: 0.4; }
-        .tasks-empty-text { font-size: 0.72rem; color: var(--muted); }
+/* ── Right panel ── */
+.jobs-area { display: flex; flex-direction: column; height: calc(100vh - 52px); overflow: hidden; }
 
-        .task-card {
-            background: var(--surface2); border: 1px solid var(--border);
-            border-radius: 8px; padding: 10px 12px;
-            position: relative; transition: border-color 0.2s; flex-shrink: 0;
-        }
-        .task-card:hover { border-color: var(--border-hover); }
-        .task-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-        .task-prompt { font-size: 0.75rem; color: var(--text); line-height: 1.45; flex: 1; word-break: break-word; }
-        .task-mode-badge {
-            font-size: 0.58rem; font-weight: 600; padding: 2px 5px; border-radius: 4px;
-            background: rgba(124,111,224,0.15); color: var(--accent2);
-            border: 1px solid rgba(124,111,224,0.2); flex-shrink: 0; text-transform: uppercase;
-        }
-        .task-mode-badge.video { background: rgba(224,111,111,0.15); color: var(--accent-video2); border-color: rgba(224,111,111,0.2); }
-        .task-delete-btn {
-            background: none; border: 1px solid var(--border);
-            color: var(--muted); cursor: pointer; font-size: 0.9rem;
-            border-radius: 4px; width: 22px; height: 22px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; transition: all 0.15s; line-height: 1;
-        }
-        .task-delete-btn:hover { border-color: var(--danger); color: var(--danger); background: rgba(239,68,68,0.08); }
-        .status-row { display: flex; align-items: center; gap: 5px; margin-top: 6px; }
-        .status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent2); animation: pulse 1.5s ease-in-out infinite; flex-shrink: 0; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-        .status { font-size: 0.7rem; color: var(--accent2); font-weight: 500; }
-        .logs-viewer {
-            background: rgba(0,0,0,0.4); color: #7878a0;
-            font-family: 'SF Mono', 'Consolas', monospace;
-            font-size: 9px; height: 42px; overflow-y: auto;
-            padding: 6px 8px; border-radius: 5px; margin-top: 7px;
-            border: 1px solid var(--border); line-height: 1.65;
-        }
+/* ── Tab bar ── */
+.tab-bar { display: flex; align-items: center; padding: 0 1.25rem; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; overflow-x: auto; }
+.tab-btn { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.12em; color: var(--muted); background: none; border: none; border-bottom: 2px solid transparent; padding: 0.85rem 0.7rem; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 0.45rem; white-space: nowrap; flex-shrink: 0; }
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-count { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1px 6px; font-size: 0.55rem; min-width: 16px; text-align: center; }
+.tab-btn.active .tab-count { background: rgba(200,255,0,0.15); border-color: rgba(200,255,0,0.3); color: var(--accent); }
+.tab-bar-actions { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; padding-right: 0.25rem; }
+.btn-clear-all { font-family: var(--font-mono); font-size: 0.56rem; letter-spacing: 0.1em; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 3px; padding: 3px 8px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.btn-clear-all:hover { border-color: var(--accent2); color: var(--accent2); }
 
-        /* ─── GALLERY ─── */
-        #tab-gallery { max-width: 1500px; margin: 0 auto; }
-        .gallery-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-        }
-        .gallery-item {
-            aspect-ratio: 1; border-radius: 8px; overflow: hidden;
-            position: relative; border: 1px solid var(--border);
-            cursor: pointer; transition: border-color 0.2s, transform 0.2s;
-        }
-        .gallery-item:hover { border-color: rgba(124,111,224,0.4); transform: translateY(-2px); }
-        .gallery-item.video-item:hover { border-color: rgba(224,111,111,0.4); }
-        .gallery-item img, .gallery-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .item-actions {
-            position: absolute; inset: 0; background: rgba(8,8,16,0.7);
-            display: flex; align-items: center; justify-content: center;
-            gap: 6px; opacity: 0; transition: opacity 0.2s;
-        }
-        .gallery-item:hover .item-actions { opacity: 1; }
-        .action-btn {
-            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
-            padding: 7px; border-radius: 6px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0; transition: background 0.15s;
-        }
-        .action-btn svg { width: 13px; height: 13px; stroke: #fff; fill: none; stroke-width: 1.8; }
-        .action-btn:hover { background: rgba(255,255,255,0.22); }
-        .action-btn.use-ref-action:hover { background: rgba(124,111,224,0.5); }
-        .gallery-video-badge {
-            position: absolute; top: 5px; left: 5px;
-            background: rgba(224,111,111,0.85); color: #fff;
-            font-size: 0.55rem; font-weight: 700;
-            padding: 2px 5px; border-radius: 3px;
-            text-transform: uppercase; letter-spacing: 0.5px;
-        }
+/* ── Tab content ── */
+.tab-content { display: none; flex: 1; overflow-y: auto; padding: 1.25rem; }
+.tab-content.active { display: block; }
+.tab-content::-webkit-scrollbar { width: 4px; }
+.tab-content::-webkit-scrollbar-track { background: transparent; }
+.tab-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-        /* ─── CONTEXT MENU (referans seçimi) ─── */
-        .ctx-menu {
-            position: fixed; z-index: 1000;
-            background: var(--surface); border: 1px solid var(--border-hover);
-            border-radius: 10px; padding: 5px;
-            min-width: 200px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-            backdrop-filter: blur(12px);
-            display: none;
-            animation: ctxFade 0.15s ease;
-        }
-        .ctx-menu.show { display: block; }
-        @keyframes ctxFade { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .ctx-menu-title {
-            font-size: 0.62rem; font-weight: 600; color: var(--muted);
-            text-transform: uppercase; letter-spacing: 0.5px;
-            padding: 6px 10px 4px; user-select: none;
-        }
-        .ctx-item {
-            display: flex; align-items: center; gap: 8px;
-            padding: 8px 10px; border-radius: 6px;
-            cursor: pointer; transition: background 0.12s;
-            font-size: 0.78rem; color: var(--text);
-        }
-        .ctx-item:hover { background: rgba(124,111,224,0.15); }
-        .ctx-item svg { width: 14px; height: 14px; stroke: var(--accent2); fill: none; stroke-width: 1.8; flex-shrink: 0; }
-        .ctx-item .ctx-label { flex: 1; }
-        .ctx-item .ctx-hint { font-size: 0.62rem; color: var(--muted); }
-        .ctx-sep { height: 1px; background: var(--border); margin: 4px 8px; }
+/* ── Empty state ── */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 40vh; gap: 0.8rem; opacity: 0.35; user-select: none; }
+.empty-state .big-icon { font-size: 3rem; }
+.empty-state p { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.12em; color: var(--muted); text-align: center; }
 
-        /* ─── PROMPT LIBRARY ─── */
-        #tab-prompts { max-width: 1500px; margin: 0 auto; }
-        .prompt-add-form { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-        .prompt-add-form input[type="text"] { flex: 1; min-width: 150px; }
-        .prompt-add-btn {
-            background: linear-gradient(135deg, var(--accent), #4f46e5);
-            color: #fff; border: none; border-radius: 8px;
-            padding: 10px 18px; cursor: pointer;
-            font-weight: 600; font-size: 0.8rem; font-family: var(--font);
-            transition: opacity 0.2s; white-space: nowrap;
-        }
-        .prompt-add-btn:hover { opacity: 0.85; }
-        .prompt-list { display: flex; flex-direction: column; gap: 8px; }
-        .prompt-item {
-            background: var(--surface2); border: 1px solid var(--border);
-            border-radius: 9px; padding: 12px 14px;
-            display: flex; align-items: flex-start; gap: 10px;
-            transition: border-color 0.2s;
-        }
-        .prompt-item:hover { border-color: var(--border-hover); }
-        .prompt-item-text { flex: 1; font-size: 0.82rem; color: var(--text); line-height: 1.55; word-break: break-word; }
-        .prompt-item-name { font-size: 0.68rem; font-weight: 600; color: var(--accent2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-        .prompt-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
-        .prompt-action-btn {
-            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-            padding: 5px 8px; border-radius: 5px; cursor: pointer;
-            display: flex; align-items: center; gap: 4px;
-            font-size: 0.68rem; color: var(--muted2);
-            font-family: var(--font); transition: all 0.15s;
-        }
-        .prompt-action-btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
-        .prompt-action-btn:hover { border-color: var(--accent); color: var(--accent2); background: var(--accent-glow); }
-        .prompt-action-btn.use-btn { color: var(--success); }
-        .prompt-action-btn.use-btn:hover { border-color: var(--success); background: rgba(34,197,94,0.1); }
-        .prompt-action-btn.del-btn:hover { border-color: var(--danger); color: var(--danger); background: rgba(239,68,68,0.08); }
-        .prompt-action-btn.save-btn { color: var(--success); }
-        .prompt-action-btn.save-btn:hover { border-color: var(--success); background: rgba(34,197,94,0.1); }
-        .prompt-action-btn.cancel-btn:hover { border-color: var(--danger); color: var(--danger); }
+/* ── Job cards ── */
+.jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.85rem; }
+.job-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; animation: fadeUp 0.3s ease both; transition: border-color 0.2s; }
+.job-card:hover { border-color: var(--muted); }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.job-thumb { aspect-ratio: 16/9; background: var(--surface); position: relative; overflow: hidden; }
+.job-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.55; }
+.job-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.job-status-badge { position: absolute; top: 8px; left: 8px; font-family: var(--font-mono); font-size: 0.56rem; letter-spacing: 0.1em; padding: 3px 8px; border-radius: 2px; text-transform: uppercase; font-weight: 600; pointer-events: none; }
+.badge-running { background: rgba(200,255,0,0.15); color: var(--accent); border: 1px solid rgba(200,255,0,0.3); }
+.badge-done    { background: rgba(0,255,128,0.15); color: #00ff80; border: 1px solid rgba(0,255,128,0.3); }
+.badge-error   { background: rgba(255,77,109,0.15); color: var(--accent2); border: 1px solid rgba(255,77,109,0.3); }
+.job-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: var(--border); }
+.job-progress-fill { height: 100%; background: var(--accent); transition: width 0.5s ease; box-shadow: 0 0 8px rgba(200,255,0,0.6); }
+.expand-btn { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 26px; height: 26px; border-radius: 4px; cursor: pointer; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; transition: all 0.15s; backdrop-filter: blur(4px); }
+.expand-btn:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+.job-delete-btn { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.72); border: 1px solid rgba(255,77,109,0.35); color: rgba(255,77,109,0.75); width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; transition: all 0.15s; z-index: 3; }
+.job-delete-btn:hover { background: var(--accent2); color: #fff; border-color: var(--accent2); }
 
-        /* Inline edit mode */
-        .prompt-edit-fields { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-        .prompt-edit-fields input, .prompt-edit-fields textarea {
-            width: 100%; padding: 8px 10px; font-size: 0.8rem;
-        }
+/* ── Send-to ── */
+.send-to-wrap { position: absolute; bottom: 8px; left: 8px; z-index: 4; }
+.send-to-btn { background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.75); width: 26px; height: 26px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; transition: all 0.15s; backdrop-filter: blur(4px); font-family: var(--font-mono); }
+.send-to-btn:hover { background: rgba(200,255,0,0.2); border-color: var(--accent); color: var(--accent); }
+.send-to-menu { display: none; position: absolute; bottom: 32px; left: 0; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0; min-width: 170px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); z-index: 10; }
+.send-to-menu.open { display: block; }
+.send-to-item { display: block; width: 100%; padding: 0.45rem 0.85rem; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; color: var(--muted); background: none; border: none; cursor: pointer; text-align: left; transition: all 0.12s; white-space: nowrap; }
+.send-to-item:hover { color: var(--accent); background: rgba(200,255,0,0.06); }
+.send-to-divider { height: 1px; background: var(--border); margin: 0.25rem 0; }
 
-        /* ─── EMPTY STATE ─── */
-        .empty-state {
-            display: flex; flex-direction: column; align-items: center;
-            gap: 8px; padding: 40px 20px;
-            border: 1px dashed var(--border); border-radius: 10px; text-align: center;
-        }
-        .empty-icon {
-            width: 38px; height: 38px; background: var(--surface2);
-            border: 1px solid var(--border); border-radius: 9px;
-            display: flex; align-items: center; justify-content: center; margin-bottom: 2px;
-        }
-        .empty-icon svg { width: 16px; height: 16px; stroke: var(--muted); fill: none; stroke-width: 1.5; }
-        .empty-title { font-size: 0.8rem; color: var(--muted2); font-weight: 500; }
-        .empty-sub { font-size: 0.7rem; color: var(--muted); }
+/* ── Card body ── */
+.job-body { padding: 0.75rem; }
+.prompt-row { display: flex; align-items: flex-start; gap: 0.35rem; margin-bottom: 0.4rem; }
+.job-prompt { font-size: 0.8rem; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; cursor: default; }
+.copy-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.75rem; padding: 0 2px; flex-shrink: 0; transition: color 0.15s, transform 0.15s; line-height: 1.4; }
+.copy-btn:hover { color: var(--accent); transform: scale(1.15); }
+.job-meta { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.meta-tag { font-family: var(--font-mono); font-size: 0.55rem; color: var(--muted); background: var(--surface); padding: 2px 6px; border-radius: 2px; border: 1px solid var(--border); }
+.job-log { background: var(--surface); border-radius: 4px; padding: 0.45rem 0.6rem; max-height: 80px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.log-line { font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted); line-height: 1.8; }
+.log-line.latest { color: var(--accent); }
+.btn-download { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; padding: 0.5rem; margin-top: 0.5rem; background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.08em; text-decoration: none; cursor: pointer; transition: all 0.15s; }
+.btn-download:hover { background: var(--accent); color: #000; }
+.gallery-date { position: absolute; bottom: 8px; right: 40px; font-family: var(--font-mono); font-size: 0.52rem; color: rgba(255,255,255,0.35); letter-spacing: 0.04em; pointer-events: none; }
 
-        #nanoBananaRow { display: none; margin-bottom: 12px; }
+/* ── Editor tab ── */
+.editor-layout { display: grid; grid-template-columns: 240px 1fr; gap: 1rem; height: calc(100vh - 52px - 45px - 2.5rem); min-height: 400px; }
+.editor-sidebar { display: flex; flex-direction: column; gap: 0.5rem; overflow: hidden; }
+.editor-sidebar-title { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; flex-shrink: 0; }
+.editor-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.editor-list-item { display: flex; align-items: center; gap: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.5rem; cursor: grab; }
+.editor-item-thumb { width: 48px; height: 27px; border-radius: 3px; overflow: hidden; flex-shrink: 0; background: var(--surface); }
+.editor-item-thumb video, .editor-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.editor-item-info { flex: 1; overflow: hidden; }
+.editor-item-prompt { font-size: 0.7rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.editor-item-meta { font-family: var(--font-mono); font-size: 0.55rem; color: var(--muted); margin-top: 1px; }
+.editor-item-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.7rem; padding: 2px; flex-shrink: 0; transition: color 0.15s; }
+.editor-item-remove:hover { color: var(--accent2); }
 
-        /* ─── RESPONSIVE ─── */
-        @media (max-width: 600px) {
-            .navbar { padding: 0 12px; }
-            .tab-btn { padding: 5px 8px; font-size: 0.72rem; gap: 3px; }
-            .tab-btn svg { width: 10px; height: 10px; }
-            .main { padding: 12px 10px; }
-            .card { padding: 14px; }
-            .field-row, .field-row-3 { grid-template-columns: 1fr; }
-            .frames-row { grid-template-columns: 1fr; }
-            .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 7px; }
-            .prompt-add-form { flex-direction: column; }
-            .img-thumb, .add-image-btn { width: 52px; height: 52px; }
-        }
-    </style>
+.editor-main { display: flex; flex-direction: column; gap: 0.75rem; }
+.editor-player-wrap { background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 16/9; position: relative; flex-shrink: 0; }
+.editor-video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.editor-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; opacity: 0.25; }
+.editor-placeholder .big-icon { font-size: 2.5rem; }
+.editor-placeholder p { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em; color: var(--muted); }
+
+/* ── Editor controls: oynat + temizle aynı satırda ── */
+.editor-controls { display: flex; align-items: center; gap: 0.75rem; }
+.editor-play-btn { font-family: var(--font-display); font-size: 0.9rem; letter-spacing: 0.15em; padding: 0.5rem 1.2rem; background: var(--accent); color: #000; border: none; border-radius: 5px; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
+.editor-play-btn:hover { box-shadow: 0 4px 20px rgba(200,255,0,0.3); }
+.editor-play-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; box-shadow: none; }
+.editor-progress { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.editor-progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s linear; }
+.editor-counter { font-family: var(--font-mono); font-size: 0.65rem; color: var(--muted); flex-shrink: 0; }
+.editor-clear-btn { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.1em; padding: 0.45rem 0.85rem; background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 4px; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
+.editor-clear-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+.editor-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; padding: 2rem; opacity: 0.3; text-align: center; }
+.editor-empty p { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em; color: var(--muted); }
+
+/* ── Prompt Library ── */
+.prompts-tab-wrap { display: flex; flex-direction: column; gap: 1rem; height: calc(100vh - 52px - 45px - 2.5rem); }
+.prompt-lib-header { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+.prompt-lib-input { flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-family: var(--font-body); font-size: 0.875rem; padding: 0.5rem 0.85rem; outline: none; transition: border-color 0.2s; }
+.prompt-lib-input:focus { border-color: var(--accent); }
+.prompt-lib-save-btn { font-family: var(--font-display); font-size: 0.85rem; letter-spacing: 0.12em; padding: 0.5rem 1rem; background: var(--accent); color: #000; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+.prompt-lib-save-btn:hover { box-shadow: 0 4px 16px rgba(200,255,0,0.25); }
+.prompt-library-list { display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.prompt-library-list::-webkit-scrollbar { width: 4px; }
+.prompt-library-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.prompt-lib-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 0.65rem 0.85rem; display: flex; align-items: flex-start; gap: 0.6rem; transition: border-color 0.15s; }
+.prompt-lib-card:hover { border-color: var(--muted); }
+.prompt-lib-text { flex: 1; font-size: 0.82rem; color: var(--text); line-height: 1.45; word-break: break-word; }
+.prompt-lib-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+.plib-btn { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 3px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+.plib-btn.use { border-color: rgba(200,255,0,0.4); color: var(--accent); }
+.plib-btn.use:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+.plib-btn.del:hover { border-color: var(--accent2); color: var(--accent2); }
+.prompt-lib-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 30vh; gap: 0.8rem; opacity: 0.35; }
+.prompt-lib-empty .big-icon { font-size: 2.5rem; }
+.prompt-lib-empty p { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.12em; color: var(--muted); text-align: center; }
+
+/* ── Modal ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.93); z-index: 999; align-items: center; justify-content: center; flex-direction: column; gap: 0.85rem; backdrop-filter: blur(10px); }
+.modal-overlay.open { display: flex; }
+.modal-close { position: fixed; top: 16px; right: 16px; background: rgba(20,20,28,0.9); border: 1px solid rgba(255,255,255,0.18); color: #fff; width: 34px; height: 34px; border-radius: 6px; cursor: pointer; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; transition: background 0.15s; z-index: 1001; }
+.modal-close:hover { background: var(--accent2); border-color: var(--accent2); }
+.modal-inner { width: 88vw; max-width: 1080px; aspect-ratio: 16/9; background: #000; border-radius: 10px; overflow: hidden; box-shadow: 0 0 80px rgba(0,0,0,0.8); animation: scaleIn 0.22s cubic-bezier(0.34,1.56,0.64,1); flex-shrink: 0; }
+@keyframes scaleIn { from { transform: scale(0.88); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-inner img, .modal-inner video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.frame-bar { display: flex; align-items: center; gap: 0.75rem; width: 88vw; max-width: 1080px; padding: 0.6rem 0.85rem; background: rgba(13,13,18,0.85); border: 1px solid var(--border); border-radius: 8px; flex-shrink: 0; }
+.frame-time { font-family: var(--font-mono); font-size: 0.65rem; color: var(--muted); white-space: nowrap; min-width: 80px; }
+.capture-btn { background: rgba(200,255,0,0.1); border: 1px solid rgba(200,255,0,0.35); color: var(--accent); font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; padding: 5px 12px; border-radius: 4px; cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+.capture-btn:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+.capture-btn:disabled { opacity: 0.5; cursor: wait; }
+.capture-target-label { font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted); margin-left: auto; }
+
+/* ── Toast ── */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--card); border: 1px solid var(--border); color: var(--text); font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.06em; padding: 0.55rem 1.2rem; border-radius: 6px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 2000; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  html, body { overflow-y: auto; overflow-x: hidden; height: auto; }
+  .wrapper { grid-template-columns: 1fr; height: auto; }
+  .panel { height: auto; overflow-y: visible; }
+  .jobs-area { height: auto; overflow: visible; }
+  .tab-content { overflow-y: visible; }
+  .editor-layout { grid-template-columns: 1fr; height: auto; }
+}
+@media (max-width: 540px) {
+  header { padding: 0 0.75rem; }
+  .header-badge { display: none; }
+}
+</style>
 </head>
 <body>
 
-<!-- Context menu -->
-<div class="ctx-menu" id="ctxMenu">
-    <div class="ctx-menu-title">Referans olarak kullan</div>
-    <div class="ctx-item" onclick="ctxAction('image')">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        <span class="ctx-label">Görsel Referansı</span>
-        <span class="ctx-hint">Resim modu</span>
+<canvas id="frame-canvas" style="display:none"></canvas>
+
+{% if show_login %}
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div class="login-wrap">
+  <div class="login-card">
+    <div>
+      <div class="login-logo">MAGE<span> STUDIO</span></div>
+      <div class="login-sub">Image → Video Engine</div>
     </div>
-    <div class="ctx-sep"></div>
-    <div class="ctx-item" onclick="ctxAction('start')">
-        <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        <span class="ctx-label">Video Start Frame</span>
-        <span class="ctx-hint">Başlangıç karesi</span>
+    {% if error %}
+    <div class="login-error">⚠️ Hatalı şifre. Tekrar deneyin.</div>
+    {% endif %}
+    <form method="POST" action="/login">
+      <div class="login-field" style="margin-bottom:1.2rem">
+        <label for="password">Şifre</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" autofocus autocomplete="current-password">
+      </div>
+      <button type="submit" class="login-btn">GİRİŞ YAP</button>
+    </form>
+  </div>
+</div>
+{% else %}
+<!-- ═══════════════ MAIN APP ═══════════════ -->
+
+<header>
+  <div class="logo">MAGE<span> STUDIO</span></div>
+  <div class="header-right">
+    <div class="header-badge">IMAGE → VIDEO ENGINE</div>
+    <a href="/logout" class="logout-btn">LOGOUT</a>
+  </div>
+</header>
+
+<div class="wrapper">
+
+  <!-- ── Left Panel ── -->
+  <aside class="panel" id="left-panel">
+
+    <div class="mode-toggle">
+      <button class="mode-btn" data-mode="image" id="btn-mode-image">🎨 IMAGE</button>
+      <button class="mode-btn active" data-mode="video" id="btn-mode-video">🎬 VIDEO</button>
     </div>
-    <div class="ctx-item" onclick="ctxAction('end')">
-        <svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-        <span class="ctx-label">Video End Frame</span>
-        <span class="ctx-hint">Bitiş karesi</span>
+
+    <!-- VIDEO section -->
+    <div class="video-only" id="video-section">
+
+      <div class="field">
+        <label>Start Frame</label>
+        <div class="image-area">
+          <div class="dropzone" id="start-dropzone" tabindex="0">
+            <input type="file" id="start-file-input" accept="image/png,image/jpeg,image/webp">
+            <span class="drop-icon">🎞️</span>
+            <div class="drop-text"><strong>Start</strong> frame sürükle</div>
+          </div>
+          <div class="preview-wrap" id="start-preview-wrap">
+            <img class="preview-img" id="start-preview-img" src="" alt="">
+            <button class="preview-remove" id="start-remove-btn">✕</button>
+            <div class="frame-badge" id="start-frame-badge">📷 FRAME</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>End Frame <span style="font-size:0.55rem;color:var(--muted)">(opsiyonel)</span></label>
+        <div class="image-area">
+          <div class="dropzone" id="end-dropzone" tabindex="0">
+            <input type="file" id="end-file-input" accept="image/png,image/jpeg,image/webp">
+            <span class="drop-icon">🏁</span>
+            <div class="drop-text"><strong>End</strong> frame sürükle</div>
+          </div>
+          <div class="preview-wrap" id="end-preview-wrap">
+            <img class="preview-img" id="end-preview-img" src="" alt="">
+            <button class="preview-remove" id="end-remove-btn">✕</button>
+            <div class="frame-badge" id="end-frame-badge">📷 FRAME</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Video Model</label>
+        <div class="model-cards" id="video-model-cards">
+          <div class="model-card active" data-val="peach_max">
+            <div class="mc-name">PEACH MAX</div><div class="mc-desc">Sinematik kalite</div>
+          </div>
+          <div class="model-card" data-val="kiwi">
+            <div class="mc-name">KIWI</div><div class="mc-desc">Hızlı üretim</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-group">
+          <label>Duration</label>
+          <div class="pills" id="duration-pills">
+            <div class="pill active" data-val="5">5s</div>
+            <div class="pill" data-val="10">10s</div>
+          </div>
+        </div>
+        <div class="toggle-group">
+          <label>Format</label>
+          <!-- Peach Max: her zaman 16:9, 9:16, 1:1 -->
+          <div class="pills" id="format-pills-peach">
+            <div class="pill active" data-val="16:9">16:9</div>
+            <div class="pill" data-val="9:16">9:16</div>
+            <div class="pill" data-val="1:1">1:1</div>
+          </div>
+          <!-- Kiwi: aynı seçenekler, ayrı state -->
+          <div class="pills" id="format-pills-kiwi" style="display:none">
+            <div class="pill active" data-val="16:9">16:9</div>
+            <div class="pill" data-val="9:16">9:16</div>
+            <div class="pill" data-val="1:1">1:1</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="audio-row">
+        <span class="audio-label">🔊 Audio</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="audio-toggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     </div>
+
+    <!-- IMAGE section -->
+    <div class="image-only" id="image-section">
+
+      <div class="field">
+        <label>Referans Görsel</label>
+        <div class="image-area full-width">
+          <div class="dropzone" id="img-dropzone" tabindex="0">
+            <input type="file" id="img-file-input" accept="image/png,image/jpeg,image/webp" multiple>
+            <span class="drop-icon">🖼️</span>
+            <div class="drop-text"><strong>Görsel sürükle</strong> veya tıkla<br><span style="font-size:0.65rem">Çoklu yükleme (maks 10)</span></div>
+          </div>
+          <div class="img-preview-outer" id="img-preview-outer">
+            <div class="img-grid-preview c1" id="img-grid-preview"></div>
+            <button class="preview-remove" id="img-remove-btn">✕</button>
+            <div id="img-count-badge" style="position:absolute;bottom:6px;left:6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--accent);background:rgba(200,255,0,0.15);border:1px solid rgba(200,255,0,0.35);padding:2px 8px;border-radius:2px;display:none;z-index:5;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Image Model</label>
+        <div class="model-cards" id="image-model-cards">
+          <div class="model-card active" data-val="mango-v2" data-arch="mango">
+            <div class="mc-name">MANGO V2</div><div class="mc-desc">2K, dengeli kalite</div>
+          </div>
+          <div class="model-card" data-val="mango-v3" data-arch="mango">
+            <div class="mc-name">MANGO V3</div><div class="mc-desc">2K, geliştirilmiş</div>
+          </div>
+          <div class="model-card" data-val="guava" data-arch="guava">
+            <div class="mc-name">GUAVA</div><div class="mc-desc">1K, hızlı</div>
+          </div>
+          <div class="model-card" data-val="nano_banana_v2" data-arch="nano_banana_v2">
+            <div class="mc-name">NANO V2</div><div class="mc-desc">2K, detay odaklı</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Standard AR (mango / guava) -->
+      <div class="toggle-row" id="standard-ar-row">
+        <div class="toggle-group">
+          <label>Aspect Ratio</label>
+          <div class="pills" id="aspect-pills">
+            <div class="pill" data-val="portrait">9:16</div>
+            <div class="pill active" data-val="cinema">16:9</div>
+            <div class="pill" data-val="landscape">3:2</div>
+            <div class="pill" data-val="square">1:1</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nano Banana V2 AR (ayrı satır) -->
+      <div class="nano-ar-row" id="nano-ar-row">
+        <label>Nano Banana Oran</label>
+        <div class="pills" id="nano-aspect-pills">
+          <div class="pill active" data-val="16:9">16:9</div>
+          <div class="pill" data-val="9:16">9:16</div>
+          <div class="pill" data-val="1:1">1:1</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prompt (her iki mod) -->
+    <div class="field">
+      <label for="prompt">Prompt</label>
+      <textarea id="prompt" placeholder="Describe the motion, mood, style...&#10;e.g. slow dolly in, golden hour, cinematic blur"></textarea>
+    </div>
+
+    <button class="btn-generate" id="generate-btn">▶ GENERATE VIDEO</button>
+  </aside>
+
+  <!-- ── Right Panel ── -->
+  <main class="jobs-area">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="generations">GENERATIONS <span class="tab-count" id="gen-count">0</span></button>
+      <button class="tab-btn" data-tab="gallery">GALLERY <span class="tab-count" id="gallery-count">0</span></button>
+      <button class="tab-btn" data-tab="editor">EDITOR <span class="tab-count" id="editor-count">0</span></button>
+      <button class="tab-btn" data-tab="prompts">PROMPTS <span class="tab-count" id="prompts-count">0</span></button>
+      <div class="tab-bar-actions">
+        <button class="btn-clear-all" id="clear-gen-btn" style="display:none">✕ TEMİZLE</button>
+        <button class="btn-clear-all" id="clear-gallery-btn" style="display:none">✕ GALERİYİ SİL</button>
+      </div>
+    </div>
+
+    <!-- Generations -->
+    <div class="tab-content active" id="tab-generations">
+      <div class="empty-state" id="empty-state">
+        <div class="big-icon">🎬</div>
+        <p>HENÜz ÜRETIM YOK</p>
+        <p>GÖRSEL YÜKLE VE GENERATE'E BAS</p>
+      </div>
+      <div class="jobs-grid" id="jobs-grid"></div>
+    </div>
+
+    <!-- Gallery -->
+    <div class="tab-content" id="tab-gallery">
+      <div class="empty-state" id="gallery-empty">
+        <div class="big-icon">🗂️</div>
+        <p>GALERİ BOŞ</p>
+        <p>TAMAMLANAN SONUÇLAR OTOMATIK EKLENIR</p>
+      </div>
+      <div class="jobs-grid" id="gallery-grid"></div>
+    </div>
+
+    <!-- Editor -->
+    <div class="tab-content" id="tab-editor">
+      <div class="editor-layout">
+        <div class="editor-sidebar">
+          <div class="editor-sidebar-title">Playlist</div>
+          <div class="editor-list" id="editor-list">
+            <div class="editor-empty" id="editor-list-empty">
+              <div style="font-size:2rem">📋</div>
+              <p>GALERİDEN VIDEO/GÖRSEL<br>EKLEMEK İÇİN KARTLARDAKI<br>→ İKONUNA BAS</p>
+            </div>
+          </div>
+        </div>
+        <div class="editor-main">
+          <div class="editor-player-wrap">
+            <video class="editor-video" id="editor-video" muted playsinline></video>
+            <div class="editor-placeholder" id="editor-placeholder">
+              <div class="big-icon">▶</div>
+              <p>PLAYLIST BOŞ</p>
+            </div>
+          </div>
+          <!-- Oynat + progress + counter + Temizle — aynı hizada -->
+          <div class="editor-controls">
+            <button class="editor-play-btn" id="editor-play-btn" disabled>▶ OYNAT</button>
+            <div class="editor-progress"><div class="editor-progress-fill" id="editor-progress-fill"></div></div>
+            <span class="editor-counter" id="editor-counter">0 / 0</span>
+            <button class="editor-clear-btn" id="editor-clear-btn">✕ Temizle</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prompts library -->
+    <div class="tab-content" id="tab-prompts">
+      <div class="prompts-tab-wrap">
+        <div class="prompt-lib-header">
+          <input type="text" class="prompt-lib-input" id="prompt-lib-input" placeholder="Prompt girin veya mevcut promptı kaydedin...">
+          <button class="prompt-lib-save-btn" id="prompt-lib-save-btn">KAYDET</button>
+        </div>
+        <div class="prompt-library-list" id="prompt-library-list">
+          <div class="prompt-lib-empty" id="prompt-lib-empty">
+            <div class="big-icon">📝</div>
+            <p>KAYITLI PROMPT YOK</p>
+            <p>YUKARIDAN PROMPT EKLE</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
 </div>
 
-<nav class="navbar">
-    <div class="logo">
-        <div class="logo-icon">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15 10l4.553-2.07A1 1 0 0121 8.806v6.388a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
-        </div>
-        <span class="logo-text">Cinematic <span>Studio</span></span>
-    </div>
-    <div class="nav-tabs">
-        <button class="tab-btn active" onclick="switchTab('studio')" id="tab-btn-studio">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>
-            Render
-        </button>
-        <button class="tab-btn" onclick="switchTab('gallery')" id="tab-btn-gallery">
-            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-            Galeri
-        </button>
-        <button class="tab-btn" onclick="switchTab('prompts')" id="tab-btn-prompts">
-            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            Promptlar
-        </button>
-    </div>
-</nav>
+<!-- Modal -->
+<div class="modal-overlay" id="media-modal">
+  <button class="modal-close" id="modal-close">✕</button>
+  <div class="modal-inner" id="modal-inner">
+    <video id="modal-video" controls loop playsinline muted></video>
+  </div>
+  <div class="frame-bar" id="frame-bar">
+    <span class="frame-time" id="frame-time">0:00 / 0:00</span>
+    <button class="capture-btn" id="capture-start-btn">📷 → START FRAME</button>
+    <button class="capture-btn" id="capture-end-btn">📷 → END FRAME</button>
+    <span class="capture-target-label" id="capture-target-label"></span>
+  </div>
+</div>
 
-<main class="main">
-
-    <!-- ═══ STUDIO ═══ -->
-    <div id="tab-studio" class="tab-pane active">
-        <div class="studio-layout">
-
-            <!-- COL 1: Form -->
-            <div class="studio-col studio-col-scroll">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-header-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
-                        <div>
-                            <div class="card-title" id="formTitle">Yeni Render</div>
-                            <div class="card-subtitle" id="formSubtitle">Görsel yükle ve prompt gir</div>
-                        </div>
-                    </div>
-
-                    <div class="mode-toggle">
-                        <button type="button" class="mode-btn active-image" id="modeImage" onclick="setMode('image')">
-                            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                            Görsel
-                        </button>
-                        <button type="button" class="mode-btn" id="modeVideo" onclick="setMode('video')">
-                            <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                            Video
-                        </button>
-                    </div>
-
-                    <form id="generateForm">
-                        <input type="hidden" id="modeInput" name="mode" value="image">
-
-                        <!-- IMAGE MODE -->
-                        <div id="imageModeFields">
-                            <div class="field">
-                                <label>Referans Görseller <span style="color:var(--muted);font-weight:400;text-transform:none;">(maks 10)</span></label>
-                                <div class="multi-image-zone" id="multiImageZone">
-                                    <input type="file" id="multiImageInput" accept="image/*" multiple style="display:none;">
-                                    <div class="add-image-btn" id="addImageBtn" onclick="document.getElementById('multiImageInput').click()">
-                                        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                        <span>Ekle</span>
-                                    </div>
-                                    <div class="multi-image-hint" id="multiImageHint">Sürükle veya + ile ekle</div>
-                                </div>
-                            </div>
-                            <div class="field">
-                                <label>Prompt</label>
-                                <input type="text" id="prompt" name="prompt" placeholder="Cinematic shot, cyberpunk city..." required>
-                            </div>
-                            <div class="field-row">
-                                <div class="field" style="margin-bottom:0">
-                                    <label>AI Model</label>
-                                    <select id="model" name="model" onchange="onModelChange()">
-                                        <option value="mango-v2">Mango v2 (2K)</option>
-                                        <option value="mango-v3">Mango v3 (2K)</option>
-                                        <option value="mango">Mango (2K)</option>
-                                        <option value="guava">Guava (1K)</option>
-                                        <option value="nano_banana_v2">Nano Banana v2 (2K)</option>
-                                    </select>
-                                </div>
-                                <div class="field" style="margin-bottom:0">
-                                    <label>Format</label>
-                                    <select id="aspect_ratio" name="aspect_ratio">
-                                        <option value="cinema">16:9 Sinema</option>
-                                        <option value="landscape">3:2 Yatay</option>
-                                        <option value="portrait">9:16 Dikey</option>
-                                        <option value="square">1:1 Kare</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div id="nanoBananaRow" class="field">
-                                <label>Nano Banana Oran</label>
-                                <select id="nano_banana_v2_aspect_ratio">
-                                    <option value="16:9">16:9</option>
-                                    <option value="9:16">9:16</option>
-                                    <option value="1:1">1:1</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- VIDEO MODE -->
-                        <div id="videoModeFields" style="display:none;">
-                            <div class="frames-row">
-                                <div>
-                                    <div class="frame-label">Start Frame</div>
-                                    <div class="dropzone" id="dropzone-start">
-                                        <div class="dropzone-inner" id="dropzone-start-content">
-                                            <div class="dz-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-                                            <span class="dz-label">Başlangıç</span>
-                                            <span class="dz-hint">PNG, JPG, WEBP</span>
-                                        </div>
-                                        <input type="file" id="image_video" name="image" class="dz-file-input" accept="image/*">
-                                        <img id="start-preview" class="dz-preview" alt="">
-                                    </div>
-                                </div>
-                                <div>
-                                    <div class="frame-label">End Frame <span style="color:var(--muted);font-weight:400;">(opsiyonel)</span></div>
-                                    <div class="dropzone video-dz" id="dropzone-end">
-                                        <div class="dropzone-inner" id="dropzone-end-content">
-                                            <div class="dz-icon video-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-                                            <span class="dz-label">Bitiş</span>
-                                            <span class="dz-hint">Opsiyonel</span>
-                                        </div>
-                                        <input type="file" id="end_image" name="end_image" class="dz-file-input" accept="image/*">
-                                        <img id="end-preview" class="dz-preview" alt="">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="field">
-                                <label>Prompt</label>
-                                <input type="text" id="prompt_video" placeholder="Cinematic motion, slow pan...">
-                            </div>
-                            <div class="field-row-3">
-                                <div class="field" style="margin-bottom:0">
-                                    <label>Video Model</label>
-                                    <select id="video_model" name="video_model">
-                                        <option value="peach_max">Peach Max</option>
-                                        <option value="kiwi">Kiwi</option>
-                                    </select>
-                                </div>
-                                <div class="field" style="margin-bottom:0">
-                                    <label>Format</label>
-                                    <select id="video_format" name="video_format">
-                                        <option value="16:9">16:9</option>
-                                        <option value="9:16">9:16</option>
-                                        <option value="1:1">1:1</option>
-                                    </select>
-                                </div>
-                                <div class="field" style="margin-bottom:0">
-                                    <label>Süre</label>
-                                    <select id="video_duration" name="video_duration">
-                                        <option value="5">5 sn</option>
-                                        <option value="10">10 sn</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="toggle-row">
-                                <span class="toggle-label">🎵 Ses</span>
-                                <label class="toggle"><input type="checkbox" id="video_audio" name="video_audio" checked><span class="slider"></span></label>
-                            </div>
-                        </div>
-                        <button type="submit" id="submitBtn" class="submit-btn">Render Başlat</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- COL 2: Result -->
-            <div class="studio-col">
-                <div class="card" style="padding:12px; flex:1; display:flex; flex-direction:column;">
-                    <div class="result-box" id="resultBox" style="flex:1;">
-                        <div class="result-placeholder" id="resultPlaceholder">
-                            <div class="rp-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
-                            <p class="rp-text">Render tamamlandığında<br>görsel/video burada çıkar</p>
-                        </div>
-                        <img id="latestResult" src="" alt="Son render">
-                        <video id="latestVideo" src="" controls loop muted playsinline></video>
-                        <button class="use-ref-btn" id="useResultBtn" onclick="showCtxMenu(event, latestResultUrl, latestResultType)">
-                            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            Referans Kullan
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- COL 3: Tasks -->
-            <div class="studio-col studio-col-tasks">
-                <div class="tasks-header">
-                    <span class="tasks-header-icon">📋</span>
-                    <span class="tasks-header-title">Aktif Görevler</span>
-                    <span class="tasks-header-count" id="taskCount">0</span>
-                </div>
-                <div class="tasks-scroll" id="tasksContainer">
-                    <div class="tasks-empty" id="tasksEmpty">
-                        <span class="tasks-empty-icon">✨</span>
-                        <span class="tasks-empty-text">Aktif görev yok</span>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- ═══ GALLERY ═══ -->
-    <div id="tab-gallery" class="tab-pane">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-header-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
-                <div><div class="card-title">Galeri</div><div class="card-subtitle">Tamamlanan render çıktıları</div></div>
-            </div>
-            <div class="gallery-grid" id="galleryContainer">
-                <div class="empty-state" id="emptyGalleryMsg" style="grid-column:1/-1;">
-                    <div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></div>
-                    <span class="empty-title">Galeri boş</span>
-                    <span class="empty-sub">Tamamlanan renderlar burada görünür</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ═══ PROMPTS ═══ -->
-    <div id="tab-prompts" class="tab-pane">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-header-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-                <div><div class="card-title">Prompt Kütüphanesi</div><div class="card-subtitle">Promptlarını kaydet ve düzenle</div></div>
-            </div>
-            <div class="prompt-add-form">
-                <input type="text" id="newPromptName" placeholder="İsim (ör: Cyberpunk)" style="max-width:180px;">
-                <input type="text" id="newPromptText" placeholder="Prompt metnini buraya yaz...">
-                <button class="prompt-add-btn" onclick="addPrompt()">+ Ekle</button>
-            </div>
-            <div class="prompt-list" id="promptList">
-                <div class="empty-state" id="emptyPromptsMsg">
-                    <div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-                    <span class="empty-title">Prompt yok</span>
-                    <span class="empty-sub">Sık kullandığın promptları buraya kaydet</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
-    const activeIntervals = {};
-    let currentMode = 'image';
-    let selectedImages = [];
-    let latestResultUrl = null;
-    let latestResultType = null;
-    let ctxTargetUrl = null;
-    let ctxTargetType = null;
+'use strict';
 
-    // ── Mode ─────────────────────────────────────────────────
-    function setMode(mode) {
-        currentMode = mode;
-        document.getElementById('modeInput').value = mode;
-        const imgBtn = document.getElementById('modeImage');
-        const vidBtn = document.getElementById('modeVideo');
-        const submitBtn = document.getElementById('submitBtn');
-        if (mode === 'video') {
-            imgBtn.className = 'mode-btn'; vidBtn.className = 'mode-btn active-video';
-            document.getElementById('imageModeFields').style.display = 'none';
-            document.getElementById('videoModeFields').style.display = 'block';
-            submitBtn.className = 'submit-btn video-mode'; submitBtn.innerText = '🎬 Video Oluştur';
-            document.getElementById('formTitle').innerText = 'Yeni Video';
-            document.getElementById('formSubtitle').innerText = 'Start/End frame yükle, prompt gir';
-            document.getElementById('prompt').removeAttribute('required');
-        } else {
-            imgBtn.className = 'mode-btn active-image'; vidBtn.className = 'mode-btn';
-            document.getElementById('imageModeFields').style.display = 'block';
-            document.getElementById('videoModeFields').style.display = 'none';
-            submitBtn.className = 'submit-btn'; submitBtn.innerText = 'Render Başlat';
-            document.getElementById('formTitle').innerText = 'Yeni Render';
-            document.getElementById('formSubtitle').innerText = 'Görsel yükle ve prompt gir';
-            document.getElementById('prompt').setAttribute('required', '');
-        }
-    }
+// ── State ──
+let activeMode = 'video';
+let startFile = null, endFile = null;
+let imgFiles = [];
+let selVideoModel  = 'peach_max';
+let selImageModel  = 'mango-v2';
+let selImageArch   = 'mango';
+let selDuration    = 5;
+let selPeachFormat = '16:9';
+let selKiwiFormat  = '16:9';
+let selAspect      = 'cinema';
+let selNanoAspect  = '16:9';
+let audioEnabled   = true; // DEFAULT ON
 
-    function onModelChange() {
-        document.getElementById('nanoBananaRow').style.display =
-            document.getElementById('model').value === 'nano_banana_v2' ? 'flex' : 'none';
-    }
+let activeTasks = {};
+const TASKS_KEY   = 'mage_tasks_v1';
+const GALLERY_KEY = 'mage_gallery_v1';
+const PROMPTS_KEY = 'mage_prompts_v1';
 
-    // ── Tab ──────────────────────────────────────────────────
-    function switchTab(tabId) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-        document.getElementById('tab-btn-' + tabId).classList.add('active');
-        document.getElementById('tab-' + tabId).classList.add('active');
-    }
+let editorPlaylist = [];
+let editorIndex = 0;
+let editorPlaying = false;
+let currentModalUrl = '', currentModalType = '';
+let frameTimeInterval = null;
 
-    // ══════════════════════════════════════════════════════════
-    // MULTI-IMAGE
-    // ══════════════════════════════════════════════════════════
-    function renderImageThumbs() {
-        const zone = document.getElementById('multiImageZone');
-        zone.querySelectorAll('.img-thumb').forEach(el => el.remove());
-        const addBtn = document.getElementById('addImageBtn');
-        const hint = document.getElementById('multiImageHint');
-        selectedImages.forEach((item, idx) => {
-            const thumb = document.createElement('div');
-            thumb.className = 'img-thumb';
-            thumb.innerHTML = `<img src="${item.dataUrl}" alt=""><button class="thumb-remove" onclick="removeImage(${idx})">×</button>`;
-            zone.insertBefore(thumb, addBtn);
-        });
-        addBtn.style.display = selectedImages.length >= 10 ? 'none' : 'flex';
-        hint.style.display = selectedImages.length > 0 ? 'none' : 'block';
-    }
-    function addFilesToList(files) {
-        const remaining = 10 - selectedImages.length;
-        const toAdd = Array.from(files).slice(0, remaining);
-        let loaded = 0;
-        toAdd.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = ev => {
-                selectedImages.push({ file, dataUrl: ev.target.result });
-                if (++loaded === toAdd.length) renderImageThumbs();
-            };
-            reader.readAsDataURL(file);
-        });
-        if (toAdd.length === 0) renderImageThumbs();
-    }
-    function removeImage(idx) { selectedImages.splice(idx, 1); renderImageThumbs(); }
+// ── Helpers ──
+function showToast(msg, dur = 2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+function escapeHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function formatTime(s) { s = Math.round(s||0); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function formatDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+}
+function copyText(text) { if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => showToast('✅ Kopyalandı!')); }
 
-    function setupMultiImageZone() {
-        const zone = document.getElementById('multiImageZone');
-        const input = document.getElementById('multiImageInput');
-        input.addEventListener('change', () => { if (input.files.length > 0) addFilesToList(input.files); input.value = ''; });
-        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
-        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-        zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); if (e.dataTransfer.files.length > 0) addFilesToList(e.dataTransfer.files); });
-    }
+// ── Mode ──
+document.querySelectorAll('.mode-btn').forEach(btn => btn.addEventListener('click', () => switchMode(btn.dataset.mode)));
+function switchMode(mode) {
+  activeMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('left-panel').classList.toggle('is-video', mode === 'video');
+  document.getElementById('generate-btn').textContent = mode === 'video' ? '▶ GENERATE VIDEO' : '▶ GENERATE IMAGE';
+}
+switchMode('video');
 
-    // ══════════════════════════════════════════════════════════
-    // INIT
-    // ══════════════════════════════════════════════════════════
-    window.addEventListener('DOMContentLoaded', async () => {
-        setupMultiImageZone();
-        loadPrompts();
-        bindDropzone('image_video', 'start-preview', 'dropzone-start-content');
-        bindDropzone('end_image', 'end-preview', 'dropzone-end-content');
-        try {
-            const res = await fetch('/get_tasks');
-            const tasks = await res.json();
-            for (const [taskId, data] of Object.entries(tasks)) {
-                if (data.status === "Tamamlandı" && data.result_url) {
-                    addToGallery(taskId, data.result_url, data.prompt, data.result_type);
-                    showLatestResult(data.result_url, data.result_type);
-                } else {
-                    createTaskBox(taskId, data.prompt, data.status, data.mode || 'image');
-                    if (data.status !== "Hata") startPolling(taskId);
-                }
-            }
-        } catch(e) {}
+// ── Dropzones ──
+function makeDropzone(dzId, inputId, onFile) {
+  const dz = document.getElementById(dzId), inp = document.getElementById(inputId);
+  if (!dz || !inp) return;
+  dz.addEventListener('click', () => inp.click());
+  dz.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); inp.click(); } });
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over'); });
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if (f) onFile(f); });
+  inp.addEventListener('change', () => { if (inp.files[0]) onFile(inp.files[0]); });
+}
+makeDropzone('start-dropzone','start-file-input', f => setStartFrame(f));
+document.getElementById('start-remove-btn').addEventListener('click', clearStartFrame);
+makeDropzone('end-dropzone','end-file-input', f => setEndFrame(f));
+document.getElementById('end-remove-btn').addEventListener('click', clearEndFrame);
+
+// Multi image
+const imgInput = document.getElementById('img-file-input');
+const imgDz = document.getElementById('img-dropzone');
+imgDz.addEventListener('click', () => imgInput.click());
+imgDz.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){e.preventDefault();imgInput.click();} });
+imgDz.addEventListener('dragover', e => { e.preventDefault(); imgDz.classList.add('drag-over'); });
+imgDz.addEventListener('dragleave', e => { if(!imgDz.contains(e.relatedTarget)) imgDz.classList.remove('drag-over'); });
+imgDz.addEventListener('drop', e => { e.preventDefault(); imgDz.classList.remove('drag-over'); if(e.dataTransfer.files.length) setImgFiles(Array.from(e.dataTransfer.files)); });
+imgInput.addEventListener('change', () => { if(imgInput.files.length) setImgFiles(Array.from(imgInput.files)); });
+document.getElementById('img-remove-btn').addEventListener('click', clearImgFiles);
+
+function setPreview(imgEl, wrapId, file) {
+  imgEl.src = URL.createObjectURL(file);
+  document.getElementById(wrapId).classList.add('visible');
+}
+function setStartFrame(f, isFrame=false) {
+  startFile = f;
+  setPreview(document.getElementById('start-preview-img'),'start-preview-wrap',f);
+  document.getElementById('start-dropzone').style.display = 'none';
+  document.getElementById('start-frame-badge').style.display = isFrame ? 'block' : 'none';
+}
+function clearStartFrame() {
+  startFile = null;
+  document.getElementById('start-preview-wrap').classList.remove('visible');
+  document.getElementById('start-dropzone').style.display = '';
+  document.getElementById('start-file-input').value = '';
+}
+function setEndFrame(f, isFrame=false) {
+  endFile = f;
+  setPreview(document.getElementById('end-preview-img'),'end-preview-wrap',f);
+  document.getElementById('end-dropzone').style.display = 'none';
+  document.getElementById('end-frame-badge').style.display = isFrame ? 'block' : 'none';
+}
+function clearEndFrame() {
+  endFile = null;
+  document.getElementById('end-preview-wrap').classList.remove('visible');
+  document.getElementById('end-dropzone').style.display = '';
+  document.getElementById('end-file-input').value = '';
+}
+
+function setImgFiles(files) {
+  imgFiles = files.slice(0,10);
+  if (!imgFiles.length) return;
+  const outer = document.getElementById('img-preview-outer');
+  const grid  = document.getElementById('img-grid-preview');
+  const badge = document.getElementById('img-count-badge');
+  const count = imgFiles.length;
+  const cls   = count===1?'c1':count===2?'c2':count===3?'c3':'c4';
+  grid.className = 'img-grid-preview ' + cls;
+  grid.innerHTML = '';
+  const show = Math.min(count,4);
+  for (let i=0; i<show; i++) {
+    const div = document.createElement('div');
+    div.className = 'img-grid-thumb';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(imgFiles[i]);
+    img.alt = '';
+    div.appendChild(img);
+    if (i===3 && count>4) {
+      const ov = document.createElement('div');
+      ov.style.cssText='position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:1rem;color:var(--accent);font-weight:600;';
+      ov.textContent='+' + (count-3);
+      div.appendChild(ov);
+    }
+    grid.appendChild(div);
+  }
+  outer.classList.add('visible');
+  imgDz.style.display = 'none';
+  badge.textContent = count>1 ? count+' görsel' : '';
+  badge.style.display = count>1 ? 'block' : 'none';
+}
+function clearImgFiles() {
+  imgFiles = [];
+  document.getElementById('img-preview-outer').classList.remove('visible');
+  imgDz.style.display = '';
+  imgInput.value = '';
+  document.getElementById('img-count-badge').style.display = 'none';
+}
+
+// ── Pills & model cards ──
+function makePills(id, cb) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('click', e => {
+    const p = e.target.closest('.pill'); if (!p) return;
+    el.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active'); cb(p.dataset.val);
+  });
+}
+function makeModelCards(id, cb) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('click', e => {
+    const c = e.target.closest('.model-card'); if (!c) return;
+    el.querySelectorAll('.model-card').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active'); cb(c.dataset.val, c.dataset.arch);
+  });
+}
+
+makePills('duration-pills',      v => selDuration = parseInt(v));
+makePills('format-pills-peach',  v => selPeachFormat = v);
+makePills('format-pills-kiwi',   v => selKiwiFormat = v);
+makePills('aspect-pills',        v => selAspect = v);
+makePills('nano-aspect-pills',   v => selNanoAspect = v);
+
+makeModelCards('video-model-cards', v => {
+  selVideoModel = v;
+  document.getElementById('format-pills-peach').style.display = v==='peach_max' ? '' : 'none';
+  document.getElementById('format-pills-kiwi').style.display  = v==='kiwi'      ? '' : 'none';
+});
+
+makeModelCards('image-model-cards', (v, arch) => {
+  selImageModel = v; selImageArch = arch||'mango';
+  const isNano = arch==='nano_banana_v2';
+  document.getElementById('nano-ar-row').classList.toggle('visible', isNano);
+  document.getElementById('standard-ar-row').style.display = isNano ? 'none' : '';
+});
+
+document.getElementById('audio-toggle').addEventListener('change', function(){ audioEnabled = this.checked; });
+
+// ── Tabs ──
+const clearGenBtn = document.getElementById('clear-gen-btn');
+const clearGalBtn = document.getElementById('clear-gallery-btn');
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    clearGenBtn.style.display = btn.dataset.tab==='generations' ? '' : 'none';
+    clearGalBtn.style.display = btn.dataset.tab==='gallery'     ? '' : 'none';
+  });
+});
+clearGenBtn.style.display = 'none';
+clearGalBtn.style.display = 'none';
+clearGenBtn.addEventListener('click', () => {
+  if (!confirm('Tüm generation kartları silinsin mi?')) return;
+  document.getElementById('jobs-grid').innerHTML = '';
+  activeTasks = {}; persistTasks(); updateGenCount();
+  document.getElementById('empty-state').style.display = '';
+});
+clearGalBtn.addEventListener('click', () => {
+  if (!confirm('Galeri silinsin mi?')) return;
+  try { localStorage.removeItem(GALLERY_KEY); } catch(e) {}
+  document.getElementById('gallery-grid').innerHTML = '';
+  updateGalleryCount();
+});
+
+// ── Generate ──
+document.getElementById('generate-btn').addEventListener('click', async () => {
+  const prompt = document.getElementById('prompt').value.trim();
+  if (!prompt) { showToast('⚠️ Prompt girin.'); return; }
+  if (activeMode==='video' && !startFile) { showToast('⚠️ Start frame seçin.'); return; }
+  if (activeMode==='image' && !imgFiles.length) { showToast('⚠️ Görsel seçin.'); return; }
+
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true; btn.textContent = '⏳ GÖNDERİLİYOR...';
+  const fd = new FormData();
+  fd.append('prompt', prompt); fd.append('mode', activeMode);
+
+  if (activeMode==='video') {
+    fd.append('image', startFile);
+    if (endFile) fd.append('end_image', endFile);
+    fd.append('model', selVideoModel);
+    fd.append('video_duration', selDuration);
+    fd.append('video_audio', audioEnabled ? 'true' : 'false');
+    fd.append('video_format', selVideoModel==='peach_max' ? selPeachFormat : selKiwiFormat);
+  } else {
+    for (const f of imgFiles) fd.append('images', f);
+    fd.append('model', selImageModel);
+    if (selImageArch==='nano_banana_v2') {
+      fd.append('aspect_ratio', selAspect);
+      fd.append('nano_banana_v2_aspect_ratio', selNanoAspect);
+    } else {
+      fd.append('aspect_ratio', selAspect);
+    }
+  }
+
+  try {
+    const res = await fetch('/start_task',{method:'POST',body:fd});
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    createJobCard(data.task_id, prompt, activeMode==='video'?selVideoModel:selImageModel, activeMode, startFile||imgFiles[0]);
+    pollTask(data.task_id);
+    document.querySelector('[data-tab="generations"]').click();
+    btn.textContent = '✅ SIRAYA ALINDI!';
+    setTimeout(() => { btn.disabled=false; btn.textContent = activeMode==='video'?'▶ GENERATE VIDEO':'▶ GENERATE IMAGE'; }, 2200);
+  } catch(e) {
+    showToast('❌ Hata: '+e.message);
+    btn.disabled=false; btn.textContent = activeMode==='video'?'▶ GENERATE VIDEO':'▶ GENERATE IMAGE';
+  }
+});
+
+function persistTasks() { try { localStorage.setItem(TASKS_KEY,JSON.stringify(activeTasks)); } catch(e) {} }
+function updateGenCount() { document.getElementById('gen-count').textContent = Object.keys(activeTasks).length; }
+
+function createJobCard(taskId, prompt, model, mode, file) {
+  document.getElementById('empty-state').style.display = 'none';
+  activeTasks[taskId] = {prompt,model,mode}; persistTasks(); updateGenCount();
+  const thumbUrl = file ? URL.createObjectURL(file) : '';
+  const card = document.createElement('div');
+  card.className='job-card'; card.id='job-'+taskId;
+  card.innerHTML=`
+    <div class="job-thumb">
+      ${thumbUrl?`<img src="${thumbUrl}" alt="">`:''}
+      <div class="job-status-badge badge-running" id="badge-${taskId}">PROCESSING</div>
+      <div class="job-progress"><div class="job-progress-fill" id="prog-${taskId}" style="width:2%"></div></div>
+      <button class="job-delete-btn" title="Sil">✕</button>
+    </div>
+    <div class="job-body">
+      <div class="prompt-row">
+        <div class="job-prompt" title="${escapeHtml(prompt)}">${escapeHtml(prompt)}</div>
+        <button class="copy-btn" data-prompt="${escapeHtml(prompt)}">📋</button>
+      </div>
+      <div class="job-meta"><span class="meta-tag">${mode.toUpperCase()}</span><span class="meta-tag">${model}</span></div>
+      <div class="job-log" id="log-${taskId}"></div>
+    </div>`;
+  card.querySelector('.copy-btn').addEventListener('click',function(){copyText(this.dataset.prompt);});
+  card.querySelector('.job-delete-btn').addEventListener('click',()=>{
+    card.remove(); delete activeTasks[taskId]; persistTasks(); updateGenCount();
+    if(!document.getElementById('jobs-grid').children.length) document.getElementById('empty-state').style.display='';
+  });
+  document.getElementById('jobs-grid').prepend(card);
+}
+
+function pollTask(taskId) {
+  const iv = setInterval(async () => {
+    try {
+      const res = await fetch('/task_status/'+taskId);
+      if (!res.ok){clearInterval(iv);return;}
+      const data = await res.json();
+      const logEl = document.getElementById('log-'+taskId);
+      if (logEl && data.logs) {
+        logEl.innerHTML = data.logs.map((l,i)=>`<div class="log-line ${i===data.logs.length-1?'latest':''}">${escapeHtml(l)}</div>`).join('');
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      if (data.status==='Tamamlandı' && data.result_url) {
+        clearInterval(iv);
+        finishTask(taskId,data.result_url,data.result_type,activeTasks[taskId]?.prompt||'',activeTasks[taskId]?.model||'');
+        delete activeTasks[taskId]; persistTasks(); updateGenCount();
+      } else if (data.status==='Hata') {
+        clearInterval(iv);
+        const b=document.getElementById('badge-'+taskId);
+        if(b){b.className='job-status-badge badge-error';b.textContent='HATA';}
+        delete activeTasks[taskId]; persistTasks(); updateGenCount();
+      }
+    } catch(e){}
+  },4000);
+}
+
+function finishTask(taskId,url,resultType,prompt,model) {
+  const badge=document.getElementById('badge-'+taskId);
+  if(badge){badge.className='job-status-badge badge-done';badge.textContent='DONE';}
+  const prog=document.getElementById('prog-'+taskId);
+  if(prog) prog.style.width='100%';
+  const isVideo=resultType==='video';
+  const thumb=document.querySelector('#job-'+taskId+' .job-thumb');
+  if(thumb) {
+    const sendToHtml=buildSendToHtml(url,resultType);
+    thumb.innerHTML=isVideo
+      ?`<video src="${escapeHtml(url)}" autoplay loop muted playsinline></video><div class="job-status-badge badge-done">DONE</div>${sendToHtml}<button class="expand-btn">⛶</button><button class="job-delete-btn">✕</button>`
+      :`<img src="${escapeHtml(url)}" alt="" style="opacity:1"><div class="job-status-badge badge-done">DONE</div>${sendToHtml}<button class="expand-btn">⛶</button><button class="job-delete-btn">✕</button>`;
+    bindThumbEvents(thumb,url,resultType,taskId,'job');
+  }
+  const body=document.querySelector('#job-'+taskId+' .job-body');
+  if(body){
+    const log=body.querySelector('.job-log'); if(log) log.remove();
+    const dlHref=isVideo?'/proxy_video?url='+encodeURIComponent(url)+'&dl=1':'/proxy_image?url='+encodeURIComponent(url);
+    const a=document.createElement('a');
+    a.className='btn-download'; a.href=dlHref; a.download=isVideo?'result.mp4':'result.jpg';
+    a.innerHTML=`⬇ DOWNLOAD ${isVideo?'VIDEO':'IMAGE'}`; body.appendChild(a);
+  }
+  saveToGallery({id:taskId,prompt,model,resultType,url,timestamp:Date.now()});
+  showToast(`🎉 ${isVideo?'Video':'Görsel'} hazır! Galeri'ye eklendi.`);
+}
+
+function buildSendToHtml(url,resultType) {
+  const eu=escapeHtml(url);
+  return `<div class="send-to-wrap"><button class="send-to-btn" data-url="${eu}" data-type="${resultType}">↗</button><div class="send-to-menu">
+    <button class="send-to-item" data-action="start" data-url="${eu}" data-type="${resultType}">→ Start Frame</button>
+    <button class="send-to-item" data-action="end"   data-url="${eu}" data-type="${resultType}">→ End Frame</button>
+    <div class="send-to-divider"></div>
+    <button class="send-to-item" data-action="image" data-url="${eu}" data-type="${resultType}">→ Image Input</button>
+    <div class="send-to-divider"></div>
+    <button class="send-to-item" data-action="editor" data-url="${eu}" data-type="${resultType}">+ Editor'e Ekle</button>
+  </div></div>`;
+}
+
+function bindThumbEvents(thumb,url,resultType,id,prefix) {
+  thumb.querySelector('.expand-btn')?.addEventListener('click',()=>openModal(url,resultType));
+  thumb.querySelector('.job-delete-btn')?.addEventListener('click',()=>{
+    const card=document.getElementById(prefix+'-'+id);
+    if(card){ card.remove();
+      if(prefix==='job'){
+        if(!document.getElementById('jobs-grid').children.length) document.getElementById('empty-state').style.display='';
+        updateGenCount();
+      } else { deleteGalleryItem(id); updateGalleryCount(); }
+    }
+  });
+  const sendBtn=thumb.querySelector('.send-to-btn'), sendMenu=thumb.querySelector('.send-to-menu');
+  if(sendBtn&&sendMenu){
+    sendBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      document.querySelectorAll('.send-to-menu.open').forEach(m=>{ if(m!==sendMenu) m.classList.remove('open'); });
+      sendMenu.classList.toggle('open');
     });
-
-    // Close context menu on click outside
-    document.addEventListener('click', e => {
-        const menu = document.getElementById('ctxMenu');
-        if (!menu.contains(e.target)) menu.classList.remove('show');
+    sendMenu.querySelectorAll('.send-to-item').forEach(item=>{
+      item.addEventListener('click',e=>{ e.stopPropagation(); sendMenu.classList.remove('open'); handleSendTo(item.dataset.action,url,resultType); });
     });
+  }
+}
 
-    function bindDropzone(inputId, previewId, contentId) {
-        const input = document.getElementById(inputId);
-        if (!input) return;
-        input.addEventListener('change', e => {
-            const file = e.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ev => {
-                const preview = document.getElementById(previewId);
-                const content = document.getElementById(contentId);
-                if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; }
-                if (content) content.style.display = 'none';
-            };
-            reader.readAsDataURL(file);
-        });
-    }
+document.addEventListener('click',()=>{ document.querySelectorAll('.send-to-menu.open').forEach(m=>m.classList.remove('open')); });
 
-    // ══════════════════════════════════════════════════════════
-    // CONTEXT MENU (referans seçim menüsü)
-    // ══════════════════════════════════════════════════════════
-    function showCtxMenu(e, url, type) {
-        e.preventDefault(); e.stopPropagation();
-        if (!url) return;
-        ctxTargetUrl = url; ctxTargetType = type;
-        const menu = document.getElementById('ctxMenu');
-        menu.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
-        menu.style.top = Math.min(e.clientY, window.innerHeight - 180) + 'px';
-        menu.classList.add('show');
-    }
+async function handleSendTo(action,url,resultType) {
+  if(action==='editor'){ editorAddItem(url,resultType,url.split('/').pop()); showToast("✅ Editor'e eklendi"); return; }
+  showToast('⏳ Aktarılıyor...');
+  try {
+    let file = resultType==='image' ? await fetchAsFile(url,'result.jpg') : await captureVideoFirstFrame(url);
+    if(action==='start'){setStartFrame(file,true); if(activeMode!=='video') switchMode('video'); showToast('✅ Start Frame olarak ayarlandı');}
+    else if(action==='end'){setEndFrame(file,true); if(activeMode!=='video') switchMode('video'); showToast('✅ End Frame olarak ayarlandı');}
+    else if(action==='image'){setImgFiles([file]); if(activeMode!=='image') switchMode('image'); showToast('✅ Görsel alanına aktarıldı');}
+  } catch(e){ showToast('❌ Aktarım başarısız: '+e.message); }
+}
 
-    async function ctxAction(action) {
-        document.getElementById('ctxMenu').classList.remove('show');
-        if (!ctxTargetUrl) return;
+async function fetchAsFile(url,name) {
+  const resp=await fetch('/proxy_image?url='+encodeURIComponent(url));
+  const blob=await resp.blob(); return new File([blob],name,{type:blob.type||'image/jpeg'});
+}
+async function captureVideoFirstFrame(url) {
+  const resp=await fetch('/proxy_image?url='+encodeURIComponent(url));
+  const videoBlob=await resp.blob(); const blobUrl=URL.createObjectURL(videoBlob);
+  return new Promise((resolve,reject)=>{
+    const v=document.createElement('video'); v.muted=true; v.preload='auto';
+    v.addEventListener('loadeddata',()=>{v.currentTime=0.1;},{once:true});
+    v.addEventListener('seeked',()=>{
+      const c=document.getElementById('frame-canvas');
+      c.width=v.videoWidth||1280; c.height=v.videoHeight||720;
+      c.getContext('2d').drawImage(v,0,0);
+      c.toBlob(blob=>{URL.revokeObjectURL(blobUrl); if(blob) resolve(new File([blob],'frame.jpg',{type:'image/jpeg'})); else reject(new Error('Blob err'));}, 'image/jpeg',0.92);
+    },{once:true});
+    v.addEventListener('error',()=>{URL.revokeObjectURL(blobUrl);reject(new Error('Video yüklenemedi'));},{once:true});
+    v.src=blobUrl; v.load();
+  });
+}
 
-        if (ctxTargetType === 'video') {
-            alert('Video sonuçları doğrudan referans olarak kullanılamaz.');
-            return;
-        }
+// ── Gallery ──
+function loadGallery() {
+  let items=[]; try{items=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');}catch(e){}
+  items.forEach(j=>renderGalleryCard(j,false)); updateGalleryCount();
+}
+function saveToGallery(job) {
+  let items=[]; try{items=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');}catch(e){}
+  items=items.filter(i=>i.id!==job.id); items.unshift(job);
+  if(items.length>100) items=items.slice(0,100);
+  try{localStorage.setItem(GALLERY_KEY,JSON.stringify(items));}catch(e){}
+  renderGalleryCard(job,true); updateGalleryCount();
+}
+function deleteGalleryItem(id) {
+  let items=[]; try{items=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');}catch(e){}
+  items=items.filter(i=>i.id!==id); try{localStorage.setItem(GALLERY_KEY,JSON.stringify(items));}catch(e){}
+}
+function updateGalleryCount() {
+  let items=[]; try{items=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');}catch(e){}
+  document.getElementById('gallery-count').textContent=items.length;
+  const empty=document.getElementById('gallery-empty');
+  if(empty) empty.style.display=items.length>0?'none':'';
+}
+function renderGalleryCard(job,prepend=true) {
+  document.getElementById('gallery-empty').style.display='none';
+  const isVideo=job.resultType==='video';
+  const dlHref=isVideo?'/proxy_video?url='+encodeURIComponent(job.url)+'&dl=1':'/proxy_image?url='+encodeURIComponent(job.url);
+  const sendToHtml=buildSendToHtml(job.url,job.resultType);
+  const card=document.createElement('div');
+  card.className='job-card'; card.id='gallery-'+job.id;
+  const mediaHtml=isVideo?`<video src="${escapeHtml(job.url)}" autoplay loop muted playsinline></video>`:`<img src="${escapeHtml(job.url)}" alt="" style="opacity:1">`;
+  card.innerHTML=`<div class="job-thumb">${mediaHtml}<div class="job-status-badge badge-done">DONE</div>${sendToHtml}<button class="expand-btn">⛶</button><button class="job-delete-btn">✕</button><div class="gallery-date">${formatDate(job.timestamp)}</div></div>
+    <div class="job-body">
+      <div class="prompt-row"><div class="job-prompt" title="${escapeHtml(job.prompt)}">${escapeHtml(job.prompt)}</div><button class="copy-btn" data-prompt="${escapeHtml(job.prompt)}">📋</button></div>
+      <div class="job-meta"><span class="meta-tag">${(job.resultType||'').toUpperCase()}</span><span class="meta-tag">${job.model||''}</span></div>
+      <a class="btn-download" href="${dlHref}" download="result.${isVideo?'mp4':'jpg'}">⬇ DOWNLOAD</a>
+    </div>`;
+  card.querySelector('.copy-btn').addEventListener('click',function(){copyText(this.dataset.prompt);});
+  bindThumbEvents(card.querySelector('.job-thumb'),job.url,job.resultType,job.id,'gallery');
+  const grid=document.getElementById('gallery-grid');
+  if(prepend) grid.prepend(card); else grid.appendChild(card);
+}
 
-        try {
-            const resp = await fetch('/proxy_image?url=' + encodeURIComponent(ctxTargetUrl));
-            const blob = await resp.blob();
-            const file = new File([blob], 'ref_' + Date.now() + '.jpg', { type: blob.type || 'image/jpeg' });
+// ── Prompt Library ──
+function getPrompts() { try{return JSON.parse(localStorage.getItem(PROMPTS_KEY)||'[]');}catch(e){return [];} }
+function savePrompts(arr) { try{localStorage.setItem(PROMPTS_KEY,JSON.stringify(arr));}catch(e){} }
+function updatePromptsCount() { document.getElementById('prompts-count').textContent=getPrompts().length; }
 
-            if (action === 'image') {
-                setMode('image');
-                if (selectedImages.length >= 10) { alert('Maks 10 görsel.'); return; }
-                const reader = new FileReader();
-                reader.onload = ev => { selectedImages.push({ file, dataUrl: ev.target.result }); renderImageThumbs(); };
-                reader.readAsDataURL(file);
-            } else if (action === 'start') {
-                setMode('video');
-                const dt = new DataTransfer(); dt.items.add(file);
-                document.getElementById('image_video').files = dt.files;
-                const reader = new FileReader();
-                reader.onload = ev => {
-                    document.getElementById('start-preview').src = ev.target.result;
-                    document.getElementById('start-preview').style.display = 'block';
-                    document.getElementById('dropzone-start-content').style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            } else if (action === 'end') {
-                setMode('video');
-                const dt = new DataTransfer(); dt.items.add(file);
-                document.getElementById('end_image').files = dt.files;
-                const reader = new FileReader();
-                reader.onload = ev => {
-                    document.getElementById('end-preview').src = ev.target.result;
-                    document.getElementById('end-preview').style.display = 'block';
-                    document.getElementById('dropzone-end-content').style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            }
-
-            switchTab('studio');
-            document.getElementById('generateForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } catch (err) { alert('Görsel yüklenirken hata oluştu.'); }
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // FORM SUBMIT (sıfırlanmaz)
-    // ══════════════════════════════════════════════════════════
-    document.getElementById('generateForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('submitBtn');
-        btn.disabled = true; const origText = btn.innerText; btn.innerText = "İşleniyor...";
-        const mode = document.getElementById('modeInput').value;
-        const formData = new FormData();
-        formData.append('mode', mode);
-
-        if (mode === 'video') {
-            const startFile = document.getElementById('image_video').files[0];
-            if (!startFile) { alert("Start frame seçmelisiniz"); btn.disabled = false; btn.innerText = origText; return; }
-            formData.append('image', startFile);
-            const endFile = document.getElementById('end_image').files[0];
-            if (endFile) formData.append('end_image', endFile);
-            formData.append('prompt', document.getElementById('prompt_video').value);
-            formData.append('model', document.getElementById('video_model').value);
-            formData.append('aspect_ratio', 'cinema');
-            formData.append('video_format', document.getElementById('video_format').value);
-            formData.append('video_duration', document.getElementById('video_duration').value);
-            formData.append('video_audio', document.getElementById('video_audio').checked ? 'true' : 'false');
-        } else {
-            if (selectedImages.length === 0) { alert("En az 1 görsel seçmelisiniz"); btn.disabled = false; btn.innerText = origText; return; }
-            selectedImages.forEach(item => formData.append('images', item.file));
-            formData.append('prompt', document.getElementById('prompt').value);
-            formData.append('model', document.getElementById('model').value);
-            formData.append('aspect_ratio', document.getElementById('aspect_ratio').value);
-            if (document.getElementById('model').value === 'nano_banana_v2') {
-                formData.append('nano_banana_v2_aspect_ratio', document.getElementById('nano_banana_v2_aspect_ratio').value);
-            }
-        }
-
-        try {
-            const response = await fetch('/start_task', { method: 'POST', body: formData });
-            const data = await response.json();
-            if (data.error) { alert(data.error); }
-            else if (data.task_id) {
-                const promptText = mode === 'video' ? document.getElementById('prompt_video').value : document.getElementById('prompt').value;
-                createTaskBox(data.task_id, promptText, "Başlıyor...", mode);
-                startPolling(data.task_id);
-            }
-        } catch (err) { alert("Bağlantı hatası"); }
-        finally { btn.disabled = false; btn.innerText = origText; }
+function renderPromptLibrary() {
+  const list=document.getElementById('prompt-library-list');
+  const empty=document.getElementById('prompt-lib-empty');
+  Array.from(list.children).forEach(c=>{ if(c.id!=='prompt-lib-empty') c.remove(); });
+  const prompts=getPrompts();
+  if(!prompts.length){ if(empty) empty.style.display=''; updatePromptsCount(); return; }
+  if(empty) empty.style.display='none';
+  prompts.forEach((p,i)=>{
+    const card=document.createElement('div'); card.className='prompt-lib-card';
+    card.innerHTML=`<div class="prompt-lib-text">${escapeHtml(p.text)}</div>
+      <div class="prompt-lib-actions">
+        <button class="plib-btn use">↗ Kullan</button>
+        <button class="plib-btn del">✕ Sil</button>
+      </div>`;
+    card.querySelector('.plib-btn.use').addEventListener('click',()=>{
+      document.getElementById('prompt').value=p.text;
+      showToast('✅ Prompt alana aktarıldı');
     });
+    card.querySelector('.plib-btn.del').addEventListener('click',()=>{
+      const arr=getPrompts(); arr.splice(i,1); savePrompts(arr);
+      renderPromptLibrary(); updatePromptsCount();
+    });
+    list.appendChild(card);
+  });
+  updatePromptsCount();
+}
 
-    // ══════════════════════════════════════════════════════════
-    // RESULT
-    // ══════════════════════════════════════════════════════════
-    function showLatestResult(url, type) {
-        latestResultUrl = url; latestResultType = type;
-        const img = document.getElementById('latestResult');
-        const vid = document.getElementById('latestVideo');
-        document.getElementById('resultPlaceholder').style.display = 'none';
-        if (type === 'video') {
-            img.classList.remove('visible'); img.style.display = 'none';
-            vid.src = url; vid.classList.add('visible'); vid.style.display = 'block';
-            vid.muted = true; vid.play().catch(() => {});
-        } else {
-            vid.classList.remove('visible'); vid.style.display = 'none'; vid.pause();
-            img.src = url; img.classList.add('visible'); img.style.display = 'block';
-        }
-    }
+document.getElementById('prompt-lib-save-btn').addEventListener('click',()=>{
+  const inp=document.getElementById('prompt-lib-input');
+  const text=inp.value.trim(); if(!text){showToast('⚠️ Prompt girin.');return;}
+  const arr=getPrompts(); arr.unshift({text,ts:Date.now()}); savePrompts(arr);
+  inp.value=''; renderPromptLibrary(); updatePromptsCount(); showToast('✅ Prompt kaydedildi!');
+});
 
-    // ══════════════════════════════════════════════════════════
-    // TASKS
-    // ══════════════════════════════════════════════════════════
-    function updateTaskCount() {
-        const count = document.querySelectorAll('.task-card').length;
-        document.getElementById('taskCount').textContent = count;
-        document.getElementById('tasksEmpty').style.display = count > 0 ? 'none' : 'flex';
-    }
+// ── Editor ──
+function editorAddItem(url,resultType,label) {
+  editorPlaylist.push({url,resultType,label:label||url.split('/').pop()});
+  renderEditorList(); updateEditorCount();
+  document.getElementById('editor-play-btn').disabled=false;
+}
+function renderEditorList() {
+  const list=document.getElementById('editor-list');
+  const emptyEl=document.getElementById('editor-list-empty');
+  Array.from(list.children).forEach(c=>{ if(c.id!=='editor-list-empty') c.remove(); });
+  if(!editorPlaylist.length){ if(emptyEl) emptyEl.style.display=''; return; }
+  if(emptyEl) emptyEl.style.display='none';
+  editorPlaylist.forEach((item,i)=>{
+    const div=document.createElement('div'); div.className='editor-list-item';
+    div.innerHTML=`<div class="editor-item-thumb">${item.resultType==='video'?`<video src="${escapeHtml(item.url)}" muted autoplay loop playsinline></video>`:`<img src="${escapeHtml(item.url)}" alt="">`}</div>
+      <div class="editor-item-info"><div class="editor-item-prompt">${escapeHtml(item.label)}</div><div class="editor-item-meta">${item.resultType?.toUpperCase()} · #${i+1}</div></div>
+      <button class="editor-item-remove">✕</button>`;
+    div.querySelector('.editor-item-remove').addEventListener('click',()=>{
+      editorPlaylist.splice(i,1); renderEditorList(); updateEditorCount();
+      if(!editorPlaylist.length){ document.getElementById('editor-play-btn').disabled=true; document.getElementById('editor-counter').textContent='0 / 0'; }
+    });
+    list.appendChild(div);
+  });
+}
+function updateEditorCount() {
+  document.getElementById('editor-count').textContent=editorPlaylist.length;
+  document.getElementById('editor-counter').textContent=editorPlaylist.length?`${editorIndex+1} / ${editorPlaylist.length}`:'0 / 0';
+}
 
-    function createTaskBox(taskId, promptText, statusText, mode) {
-        if (document.getElementById('task-' + taskId)) return;
-        document.getElementById('tasksEmpty').style.display = 'none';
-        const badgeClass = mode === 'video' ? 'task-mode-badge video' : 'task-mode-badge';
-        const badgeLabel = mode === 'video' ? 'VİDEO' : 'GÖRSEL';
-        const html = `
-            <div class="task-card" id="task-${taskId}">
-                <div class="task-top">
-                    <div class="task-prompt">${promptText || '(boş prompt)'}</div>
-                    <span class="${badgeClass}">${badgeLabel}</span>
-                    <button class="task-delete-btn" onclick="deleteTask('${taskId}')">×</button>
-                </div>
-                <div class="status-row">
-                    <span class="status-dot"></span>
-                    <span class="status" id="status-${taskId}">${statusText}</span>
-                </div>
-                <div class="logs-viewer" id="logs-${taskId}">Başlatılıyor...</div>
-            </div>
-        `;
-        document.getElementById('tasksContainer').insertAdjacentHTML('afterbegin', html);
-        updateTaskCount();
-    }
+const editorVideo=document.getElementById('editor-video');
+const editorPlayBtn=document.getElementById('editor-play-btn');
+const editorPlaceholder=document.getElementById('editor-placeholder');
+const editorProgressFill=document.getElementById('editor-progress-fill');
+const editorCounter=document.getElementById('editor-counter');
 
-    async function deleteTask(taskId) {
-        const card = document.getElementById('task-' + taskId);
-        if (card) card.remove();
-        if (activeIntervals[taskId]) { clearInterval(activeIntervals[taskId]); delete activeIntervals[taskId]; }
-        try { await fetch('/delete_task/' + taskId, { method: 'DELETE' }); } catch(e) {}
-        updateTaskCount();
-    }
+editorPlayBtn.addEventListener('click',()=>{
+  if(!editorPlaylist.length) return;
+  if(editorPlaying){ editorPlaying=false; editorVideo.pause(); editorPlayBtn.textContent='▶ OYNAT'; }
+  else { editorIndex=0; editorPlaying=true; editorPlayBtn.textContent='⏸ DURDUR'; editorPlaceholder.style.display='none'; playEditorItem(0); }
+});
 
-    // ══════════════════════════════════════════════════════════
-    // GALLERY
-    // ══════════════════════════════════════════════════════════
-    function addToGallery(taskId, url, promptText, type) {
-        document.getElementById('emptyGalleryMsg').style.display = 'none';
-        if (document.getElementById('gallery-item-' + taskId)) return;
-        const isVideo = type === 'video';
-        const safePrompt = (promptText || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        const safeUrl = url.replace(/'/g, "\\'");
-        const mediaTag = isVideo
-            ? `<video src="${url}" loop muted playsinline autoplay></video><span class="gallery-video-badge">VIDEO</span>`
-            : `<img src="${url}" alt="${safePrompt}">`;
-        const itemClass = isVideo ? 'gallery-item video-item' : 'gallery-item';
+document.getElementById('editor-clear-btn').addEventListener('click',()=>{
+  editorPlaylist=[]; editorPlaying=false; editorVideo.pause(); editorVideo.src='';
+  editorPlayBtn.textContent='▶ OYNAT'; editorPlayBtn.disabled=true;
+  editorPlaceholder.style.display=''; editorProgressFill.style.width='0%'; editorCounter.textContent='0 / 0';
+  renderEditorList(); updateEditorCount();
+  const ov=document.getElementById('editor-img-overlay'); if(ov) ov.style.display='none';
+});
 
-        const html = `
-            <div class="${itemClass}" id="gallery-item-${taskId}" title="${safePrompt}">
-                ${mediaTag}
-                <div class="item-actions">
-                    <button class="action-btn" onclick="event.stopPropagation(); window.open('${safeUrl}', '_blank')" title="Aç">
-                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                    <button class="action-btn use-ref-action" onclick="showCtxMenu(event, '${safeUrl}', '${type}')" title="Referans olarak kullan">
-                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    </button>
-                    <button class="action-btn" onclick="event.stopPropagation(); deleteGalleryItem('${taskId}')" title="Sil">
-                        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                    </button>
-                </div>
-            </div>
-        `;
-        document.getElementById('galleryContainer').insertAdjacentHTML('afterbegin', html);
-    }
+function playEditorItem(idx) {
+  if(idx>=editorPlaylist.length){ editorPlaying=false; editorPlayBtn.textContent='▶ OYNAT'; editorProgressFill.style.width='100%'; return; }
+  editorIndex=idx; const item=editorPlaylist[idx];
+  editorCounter.textContent=`${idx+1} / ${editorPlaylist.length}`;
+  if(item.resultType==='video'){
+    editorVideo.style.display=''; editorVideo.src=item.url; editorVideo.muted=false; editorVideo.load(); editorVideo.play().catch(()=>{});
+    editorVideo.onended=()=>{ if(editorPlaying) playEditorItem(idx+1); };
+    editorVideo.ontimeupdate=()=>{ if(!editorVideo.duration) return; const lp=editorVideo.currentTime/editorVideo.duration; editorProgressFill.style.width=((idx+lp)/editorPlaylist.length*100)+'%'; };
+  } else {
+    editorVideo.style.display='none';
+    let imgEl=document.getElementById('editor-img-overlay');
+    if(!imgEl){ imgEl=document.createElement('img'); imgEl.id='editor-img-overlay'; imgEl.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;'; document.querySelector('.editor-player-wrap').appendChild(imgEl); }
+    imgEl.src=item.url; imgEl.style.display='block';
+    editorVideo.onended=null; editorVideo.ontimeupdate=null;
+    const pS=(idx/editorPlaylist.length)*100, pE=((idx+1)/editorPlaylist.length)*100;
+    let elapsed=0; const dur=3000,step=50;
+    const timer=setInterval(()=>{
+      if(!editorPlaying){clearInterval(timer);return;}
+      elapsed+=step; const frac=Math.min(elapsed/dur,1);
+      editorProgressFill.style.width=(pS+(pE-pS)*frac)+'%';
+      if(elapsed>=dur){ clearInterval(timer); imgEl.style.display='none'; editorVideo.style.display=''; if(editorPlaying) playEditorItem(idx+1); }
+    },step);
+  }
+}
 
-    async function deleteGalleryItem(taskId) {
-        const item = document.getElementById('gallery-item-' + taskId);
-        if (item) item.remove();
-        if (document.querySelectorAll('.gallery-item').length === 0) document.getElementById('emptyGalleryMsg').style.display = 'flex';
-        try { await fetch('/delete_task/' + taskId, { method: 'DELETE' }); } catch(e) {}
-    }
+// ── Modal ──
+const modalInner=document.getElementById('modal-inner');
+function openModal(url,type) {
+  currentModalUrl=url; currentModalType=type;
+  const modal=document.getElementById('media-modal'), frameBar=document.getElementById('frame-bar');
+  if(type==='video'){
+    modalInner.innerHTML='<video id="modal-video" controls loop playsinline muted></video>';
+    const vid=modalInner.querySelector('video'); vid.src=url; vid.load(); vid.play().catch(()=>{});
+    frameBar.style.display='flex';
+    frameTimeInterval=setInterval(()=>{ const t=document.getElementById('frame-time'); if(t&&vid) t.textContent=formatTime(vid.currentTime)+' / '+(isFinite(vid.duration)?formatTime(vid.duration):'?:??'); },250);
+  } else {
+    modalInner.innerHTML=`<img src="${escapeHtml(url)}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;">`;
+    frameBar.style.display='none';
+  }
+  modal.classList.add('open'); document.body.style.overflow='hidden';
+}
+function closeModal() {
+  document.getElementById('media-modal').classList.remove('open');
+  modalInner.innerHTML=''; document.body.style.overflow='';
+  if(frameTimeInterval){clearInterval(frameTimeInterval);frameTimeInterval=null;}
+}
+document.getElementById('modal-close').addEventListener('click',closeModal);
+document.getElementById('media-modal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
 
-    // ══════════════════════════════════════════════════════════
-    // POLLING
-    // ══════════════════════════════════════════════════════════
-    function startPolling(taskId) {
-        if (activeIntervals[taskId]) return;
-        activeIntervals[taskId] = setInterval(async () => {
-            try {
-                const res = await fetch('/task_status/' + taskId);
-                if (!res.ok) { deleteTask(taskId); return; }
-                const data = await res.json();
-                const statusEl = document.getElementById('status-' + taskId);
-                const logsEl = document.getElementById('logs-' + taskId);
-                if (logsEl && data.logs && data.logs.length > 0) {
-                    logsEl.innerHTML = data.logs.join('<br>');
-                    logsEl.scrollTop = logsEl.scrollHeight;
-                }
-                if (statusEl) statusEl.innerText = data.status;
-                if (data.status === "Tamamlandı") {
-                    addToGallery(taskId, data.result_url, data.prompt, data.result_type);
-                    showLatestResult(data.result_url, data.result_type);
-                    const card = document.getElementById('task-' + taskId);
-                    if (card) card.remove();
-                    clearInterval(activeIntervals[taskId]); delete activeIntervals[taskId];
-                    updateTaskCount();
-                } else if (data.status === "Hata") {
-                    if (statusEl) {
-                        statusEl.style.color = '#ef4444';
-                        const dot = statusEl.previousElementSibling;
-                        if (dot) { dot.style.background = '#ef4444'; dot.style.animation = 'none'; }
-                    }
-                    clearInterval(activeIntervals[taskId]); delete activeIntervals[taskId];
-                }
-            } catch(e) {}
-        }, 2500);
-    }
+async function captureCurrentFrame(target) {
+  const vid=modalInner.querySelector('video'); if(!vid) return;
+  const btn=target==='start'?document.getElementById('capture-start-btn'):document.getElementById('capture-end-btn');
+  btn.disabled=true; btn.textContent='⏳...';
+  const seekTime=vid.currentTime;
+  try {
+    let file;
+    const canvas=document.getElementById('frame-canvas');
+    canvas.width=vid.videoWidth||1280; canvas.height=vid.videoHeight||720;
+    canvas.getContext('2d').drawImage(vid,0,0);
+    try {
+      canvas.toDataURL();
+      file=await new Promise((res,rej)=>{ canvas.toBlob(blob=>{ if(blob) res(new File([blob],`frame_${Math.round(seekTime)}s.jpg`,{type:'image/jpeg'})); else rej(new Error('Blob failed')); },'image/jpeg',0.92); });
+    } catch(corsErr) { file=await captureFrameAtTime(currentModalUrl,seekTime); }
+    closeModal();
+    setTimeout(()=>{
+      if(target==='start'){setStartFrame(file,true);if(activeMode!=='video')switchMode('video');}
+      else {setEndFrame(file,true);if(activeMode!=='video')switchMode('video');}
+      showToast(`📷 ${formatTime(seekTime)} → ${target==='start'?'Start':'End'} Frame`);
+    },300);
+  } catch(e){ showToast('❌ Frame alınamadı: '+e.message); }
+  finally { btn.disabled=false; btn.textContent=target==='start'?'📷 → START FRAME':'📷 → END FRAME'; }
+}
+async function captureFrameAtTime(url,seekTime) {
+  const resp=await fetch('/proxy_image?url='+encodeURIComponent(url));
+  const videoBlob=await resp.blob(); const blobUrl=URL.createObjectURL(videoBlob);
+  return new Promise((resolve,reject)=>{
+    const v=document.createElement('video'); v.muted=true; v.preload='auto';
+    const onS=()=>{ const c=document.getElementById('frame-canvas'); c.width=v.videoWidth||1280; c.height=v.videoHeight||720; c.getContext('2d').drawImage(v,0,0); c.toBlob(blob=>{URL.revokeObjectURL(blobUrl);if(blob)resolve(new File([blob],`frame_${Math.round(seekTime)}s.jpg`,{type:'image/jpeg'}));else reject(new Error('Blob err'));},'image/jpeg',0.92); };
+    v.addEventListener('loadeddata',()=>{ if(seekTime<=0.1){onS();}else{v.addEventListener('seeked',onS,{once:true});v.currentTime=Math.min(seekTime,(v.duration||999)-0.05);} },{once:true});
+    v.addEventListener('error',()=>{URL.revokeObjectURL(blobUrl);reject(new Error('Video proxy hatası'));},{once:true});
+    v.src=blobUrl; v.load();
+  });
+}
+document.getElementById('capture-start-btn').addEventListener('click',()=>captureCurrentFrame('start'));
+document.getElementById('capture-end-btn').addEventListener('click',()=>captureCurrentFrame('end'));
 
-    // ══════════════════════════════════════════════════════════
-    // PROMPT LIBRARY (localStorage + inline editing)
-    // ══════════════════════════════════════════════════════════
-    function getPrompts() { try { return JSON.parse(localStorage.getItem('cs_prompts') || '[]'); } catch { return []; } }
-    function savePrompts(list) { localStorage.setItem('cs_prompts', JSON.stringify(list)); }
-    function loadPrompts() { renderPrompts(getPrompts()); }
+function restoreActiveTasks() {
+  let saved={}; try{saved=JSON.parse(localStorage.getItem(TASKS_KEY)||'{}');}catch(e){}
+  Object.keys(saved).forEach(taskId=>{ const {prompt,model,mode}=saved[taskId]; activeTasks[taskId]={prompt,model,mode}; createJobCard(taskId,prompt,model,mode,null); pollTask(taskId); });
+  updateGenCount();
+}
 
-    function renderPrompts(list) {
-        const container = document.getElementById('promptList');
-        const emptyMsg = document.getElementById('emptyPromptsMsg');
-        container.querySelectorAll('.prompt-item').forEach(el => el.remove());
-        if (list.length === 0) { emptyMsg.style.display = 'flex'; return; }
-        emptyMsg.style.display = 'none';
-        list.forEach((p, idx) => {
-            const safeText = p.text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const safeName = (p.name || 'Untitled').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const html = `
-                <div class="prompt-item" id="prompt-item-${idx}">
-                    <div style="flex:1;" id="prompt-display-${idx}">
-                        <div class="prompt-item-name">${safeName}</div>
-                        <div class="prompt-item-text">${safeText}</div>
-                    </div>
-                    <div class="prompt-item-actions" id="prompt-actions-${idx}">
-                        <button class="prompt-action-btn use-btn" onclick="usePrompt(${idx})" title="Kullan">
-                            <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                            Kullan
-                        </button>
-                        <button class="prompt-action-btn" onclick="startEditPrompt(${idx})" title="Düzenle">
-                            <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        </button>
-                        <button class="prompt-action-btn del-btn" onclick="deletePrompt(${idx})" title="Sil">
-                            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                        </button>
-                    </div>
-                </div>
-            `;
-            container.insertAdjacentHTML('beforeend', html);
-        });
-    }
-
-    function addPrompt() {
-        const nameEl = document.getElementById('newPromptName');
-        const textEl = document.getElementById('newPromptText');
-        const text = textEl.value.trim();
-        if (!text) { alert('Prompt metni giriniz'); return; }
-        const list = getPrompts();
-        list.push({ name: nameEl.value.trim() || 'Untitled', text });
-        savePrompts(list); renderPrompts(list);
-        nameEl.value = ''; textEl.value = '';
-    }
-
-    function deletePrompt(idx) {
-        const list = getPrompts(); list.splice(idx, 1);
-        savePrompts(list); renderPrompts(list);
-    }
-
-    // ── INLINE EDIT (prompt() yerine) ────────────────────────
-    function startEditPrompt(idx) {
-        const list = getPrompts();
-        const p = list[idx];
-        const display = document.getElementById('prompt-display-' + idx);
-        const actions = document.getElementById('prompt-actions-' + idx);
-
-        // Replace display with inline edit fields
-        display.innerHTML = `
-            <div class="prompt-edit-fields">
-                <input type="text" id="edit-name-${idx}" value="${(p.name || '').replace(/"/g, '&quot;')}" placeholder="İsim">
-                <textarea id="edit-text-${idx}" rows="3" placeholder="Prompt metni">${p.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
-            </div>
-        `;
-
-        // Replace actions with save/cancel
-        actions.innerHTML = `
-            <button class="prompt-action-btn save-btn" onclick="saveEditPrompt(${idx})" title="Kaydet">
-                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                Kaydet
-            </button>
-            <button class="prompt-action-btn cancel-btn" onclick="cancelEditPrompt()" title="İptal">
-                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                İptal
-            </button>
-        `;
-
-        // Focus name input
-        document.getElementById('edit-name-' + idx).focus();
-    }
-
-    function saveEditPrompt(idx) {
-        const list = getPrompts();
-        const newName = document.getElementById('edit-name-' + idx).value.trim();
-        const newText = document.getElementById('edit-text-' + idx).value.trim();
-        list[idx] = { name: newName || 'Untitled', text: newText || list[idx].text };
-        savePrompts(list); renderPrompts(list);
-    }
-
-    function cancelEditPrompt() { renderPrompts(getPrompts()); }
-
-    function usePrompt(idx) {
-        const list = getPrompts();
-        const p = list[idx];
-        if (currentMode === 'video') {
-            document.getElementById('prompt_video').value = p.text;
-        } else {
-            document.getElementById('prompt').value = p.text;
-        }
-        switchTab('studio');
-        const field = currentMode === 'video' ? document.getElementById('prompt_video') : document.getElementById('prompt');
-        field.focus(); field.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+// ── Init ──
+loadGallery();
+renderPromptLibrary();
+restoreActiveTasks();
 </script>
+
+{% endif %}
 </body>
 </html>
