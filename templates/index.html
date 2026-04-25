@@ -39,7 +39,7 @@ body::before {
 }
 .login-logo { font-family: var(--font-display); font-size: 2rem; letter-spacing: 0.2em; color: var(--accent); text-shadow: 0 0 30px rgba(200,255,0,0.35); text-align: center; }
 .login-logo span { color: var(--text); }
-.login-sub { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.15em; color: var(--muted); text-align: center; text-transform: uppercase; margin-top: -1rem; }
+.login-sub { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.15em; color: var(--muted); text-align: center; text-transform: uppercase; margin-top: 0.3rem; }
 .login-field { display: flex; flex-direction: column; gap: 0.5rem; }
 .login-field label { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
 .login-field input { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-family: var(--font-mono); font-size: 0.95rem; padding: 0.7rem 1rem; outline: none; transition: border-color 0.2s; width: 100%; letter-spacing: 0.2em; }
@@ -86,6 +86,17 @@ header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex
 /* ── Multi-image grid preview ── */
 .img-preview-outer { display: none; position: absolute; inset: 0; background: var(--card); }
 .img-preview-outer.visible { display: block; }
+
+/* + daha fazla görsel ekle butonu */
+.img-add-more-btn {
+  position: absolute; top: 6px; left: 6px; z-index: 6;
+  background: rgba(0,0,0,0.72); border: 1px solid rgba(200,255,0,0.45);
+  color: var(--accent); width: 26px; height: 26px; border-radius: 4px;
+  cursor: pointer; font-size: 1rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; font-weight: 700;
+}
+.img-add-more-btn:hover { background: rgba(200,255,0,0.18); border-color: var(--accent); }
 .img-grid-preview { display: grid; width: 100%; height: 100%; }
 .img-grid-preview.c1 { grid-template-columns: 1fr; }
 .img-grid-preview.c2 { grid-template-columns: 1fr 1fr; }
@@ -127,6 +138,9 @@ select:focus { border-color: var(--accent); }
 .toggle-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
 .toggle-group { display: flex; flex-direction: column; gap: 0.35rem; }
 .pills { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+/* toggle-row içindeki pill grupları (Duration/Format) asla sarmalamasın */
+.toggle-row .pills { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.toggle-row .pills::-webkit-scrollbar { display: none; }
 .pill { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 3px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; user-select: none; }
 .pill:hover { border-color: var(--accent); color: var(--accent); }
 .pill.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
@@ -196,7 +210,12 @@ select:focus { border-color: var(--accent); }
 .job-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; animation: fadeUp 0.3s ease both; transition: border-color 0.2s; }
 .job-card:hover { border-color: var(--muted); }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-.job-thumb { aspect-ratio: 16/9; background: var(--surface); position: relative; overflow: hidden; }
+/* overflow: visible — menünün kart dışına taşmasına izin ver */
+.job-thumb { aspect-ratio: 16/9; background: var(--surface); position: relative; overflow: visible; }
+/* Medyayı sadece bu wrapper clip'ler */
+.thumb-clip { position: absolute; inset: 0; overflow: hidden; border-radius: 8px 8px 0 0; }
+.thumb-clip img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.55; }
+.thumb-clip video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .job-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.55; }
 .job-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .job-status-badge { position: absolute; top: 8px; left: 8px; font-family: var(--font-mono); font-size: 0.56rem; letter-spacing: 0.1em; padding: 3px 8px; border-radius: 2px; text-transform: uppercase; font-weight: 600; pointer-events: none; }
@@ -216,9 +235,14 @@ select:focus { border-color: var(--accent); }
 .send-to-btn:hover { background: rgba(200,255,0,0.2); border-color: var(--accent); color: var(--accent); }
 .send-to-menu { display: none; position: absolute; bottom: 32px; left: 0; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0; min-width: 170px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); z-index: 10; }
 .send-to-menu.open { display: block; }
-.send-to-item { display: block; width: 100%; padding: 0.45rem 0.85rem; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; color: var(--muted); background: none; border: none; cursor: pointer; text-align: left; transition: all 0.12s; white-space: nowrap; }
+.send-to-item { display: block; width: 100%; padding: 0.55rem 0.85rem; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; color: var(--muted); background: none; border: none; cursor: pointer; text-align: left; transition: all 0.12s; white-space: nowrap; min-height: 36px; }
 .send-to-item:hover { color: var(--accent); background: rgba(200,255,0,0.06); }
 .send-to-divider { height: 1px; background: var(--border); margin: 0.25rem 0; }
+/* Menü açıkken job-thumb ve job-card overflow:hidden'ı kaldır — menü kesilmesin */
+.job-thumb:has(.send-to-menu.open) { overflow: visible; z-index: 5; }
+.job-card:has(.send-to-menu.open) { overflow: visible; }
+/* Send-to menu fixed positioning (JS ile atanıyor) */
+.send-to-menu.open { position: fixed; display: block; z-index: 9000; }
 
 /* ── Card body ── */
 .job-body { padding: 0.75rem; }
@@ -311,17 +335,161 @@ select:focus { border-color: var(--accent); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ── Responsive ── */
+
+/* Tablet + Mobile (≤ 860px) */
 @media (max-width: 860px) {
   html, body { overflow-y: auto; overflow-x: hidden; height: auto; }
-  .wrapper { grid-template-columns: 1fr; height: auto; }
-  .panel { height: auto; overflow-y: visible; }
+
+  /* Wrapper: tek kolon, tam genişlik */
+  .wrapper {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow-x: hidden;
+  }
+
+  /* Sol panel: sabit yükseklik kalkıyor */
+  .panel {
+    height: auto;
+    overflow-y: visible;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Sağ panel */
   .jobs-area { height: auto; overflow: visible; }
-  .tab-content { overflow-y: visible; }
-  .editor-layout { grid-template-columns: 1fr; height: auto; }
+  .tab-content { overflow-y: visible; min-height: 50vh; }
+
+  /* Editor layout: alt alta */
+  .editor-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: unset;
+  }
+  .editor-sidebar {
+    max-height: 260px;
+    overflow: hidden;
+  }
+  .editor-list { max-height: 200px; }
+
+  /* Prompts tab: sabit yükseklik kalkıyor */
+  .prompts-tab-wrap {
+    height: auto;
+    min-height: unset;
+  }
+  .prompt-library-list {
+    max-height: 50vh;
+  }
+
+  /* Jobs grid: daha küçük kart */
+  .jobs-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
+  /* Modal: mobilde tam ekrana yakın */
+  .modal-inner {
+    width: 96vw;
+    max-height: 55vw; /* 16:9 oranı korunuyor */
+  }
+
+  /* Frame bar: wrap'e izin ver */
+  .frame-bar {
+    width: 96vw;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .capture-target-label { display: none; }
+
+  /* Tab bar: kaydırılabilir, overflow görünür */
+  .tab-bar {
+    padding: 0 0.75rem;
+    gap: 0;
+  }
+  .tab-btn {
+    padding: 0.85rem 0.55rem;
+    font-size: 0.6rem;
+  }
+  .tab-bar-actions { padding-right: 0; }
+
+  /* Send-to menü: yukarı değil, aşağı açılır (ekrandan taşmasın) */
+  .send-to-menu {
+    bottom: auto;
+    top: 32px;
+    left: auto;
+    right: 0;
+  }
 }
+
+/* Küçük mobil (≤ 540px) */
 @media (max-width: 540px) {
-  header { padding: 0 0.75rem; }
+  header { padding: 0 0.75rem; height: 48px; }
+  .wrapper { padding-top: 48px; }
   .header-badge { display: none; }
+  .logo { font-size: 1.15rem; }
+
+  /* Panel doldur */
+  .panel { padding: 0.75rem; gap: 0.6rem; }
+
+  /* Login kart daha kompakt */
+  .login-card { padding: 2rem 1.25rem; }
+
+  /* Model kartları: alt alta */
+  .model-cards { grid-template-columns: 1fr 1fr; gap: 0.35rem; }
+  .mc-name { font-size: 0.56rem; }
+  .mc-desc { font-size: 0.55rem; }
+
+  /* Toggle row: aspect + duration alt alta */
+  .toggle-row { grid-template-columns: 1fr; gap: 0.5rem; }
+
+  /* Jobs grid: tek kolon */
+  .jobs-grid { grid-template-columns: 1fr; }
+
+  /* Butonlar için minimum dokunma alanı */
+  .btn-generate,
+  .login-btn { min-height: 48px; font-size: 1rem; }
+  .mode-btn { min-height: 40px; }
+  .tab-btn { min-height: 44px; }
+  .expand-btn,
+  .job-delete-btn,
+  .send-to-btn,
+  .preview-remove { width: 32px; height: 32px; }
+
+  /* Frame bar butonlar küçülsün */
+  .capture-btn { font-size: 0.58rem; padding: 5px 8px; }
+  .frame-time { min-width: 60px; font-size: 0.6rem; }
+
+  /* Toast taşmasın */
+  .toast {
+    white-space: normal;
+    text-align: center;
+    max-width: 88vw;
+    font-size: 0.65rem;
+  }
+
+  /* Editor kontroller dar ekranda wrap */
+  .editor-controls { flex-wrap: wrap; gap: 0.5rem; }
+  .editor-play-btn { flex: 1; }
+  .editor-clear-btn { flex: 0 0 auto; }
+  .editor-progress { flex: 1 0 100%; order: 5; }
+
+  /* Tab count rozetleri küçük ekranda gizle */
+  .tab-count { display: none; }
+
+  /* Prompt lib header dar ekranda alt alta */
+  .prompt-lib-header { flex-direction: column; }
+  .prompt-lib-save-btn { width: 100%; text-align: center; }
+
+  /* Modal tam ekran */
+  .modal-inner {
+    width: 100vw;
+    border-radius: 0;
+    max-height: 56.25vw;
+  }
+  .frame-bar {
+    width: 100vw;
+    border-radius: 0;
+    padding: 0.5rem;
+  }
+  .modal-close { top: 8px; right: 8px; }
 }
 </style>
 </head>
@@ -465,6 +633,7 @@ select:focus { border-color: var(--accent); }
           <div class="img-preview-outer" id="img-preview-outer">
             <div class="img-grid-preview c1" id="img-grid-preview"></div>
             <button class="preview-remove" id="img-remove-btn">✕</button>
+            <button class="img-add-more-btn" id="img-add-more-btn" title="Daha fazla görsel ekle">+</button>
             <div id="img-count-badge" style="position:absolute;bottom:6px;left:6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--accent);background:rgba(200,255,0,0.15);border:1px solid rgba(200,255,0,0.35);padding:2px 8px;border-radius:2px;display:none;z-index:5;"></div>
           </div>
         </div>
@@ -694,13 +863,15 @@ document.getElementById('end-remove-btn').addEventListener('click', clearEndFram
 // Multi image
 const imgInput = document.getElementById('img-file-input');
 const imgDz = document.getElementById('img-dropzone');
-imgDz.addEventListener('click', () => imgInput.click());
-imgDz.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){e.preventDefault();imgInput.click();} });
+let imgAppendMode = false; // + butonuyla eklemede true olur
+imgDz.addEventListener('click', (e) => { if(e.target===imgInput) return; imgAppendMode = false; imgInput.click(); });
+imgDz.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){e.preventDefault(); imgAppendMode = false; imgInput.click();} });
 imgDz.addEventListener('dragover', e => { e.preventDefault(); imgDz.classList.add('drag-over'); });
 imgDz.addEventListener('dragleave', e => { if(!imgDz.contains(e.relatedTarget)) imgDz.classList.remove('drag-over'); });
-imgDz.addEventListener('drop', e => { e.preventDefault(); imgDz.classList.remove('drag-over'); if(e.dataTransfer.files.length) setImgFiles(Array.from(e.dataTransfer.files)); });
-imgInput.addEventListener('change', () => { if(imgInput.files.length) setImgFiles(Array.from(imgInput.files)); });
+imgDz.addEventListener('drop', e => { e.preventDefault(); imgDz.classList.remove('drag-over'); if(e.dataTransfer.files.length) setImgFiles(Array.from(e.dataTransfer.files), false); });
+imgInput.addEventListener('change', () => { if(imgInput.files.length) setImgFiles(Array.from(imgInput.files), imgAppendMode); imgAppendMode = false; imgInput.value = ''; });
 document.getElementById('img-remove-btn').addEventListener('click', clearImgFiles);
+document.getElementById('img-add-more-btn').addEventListener('click', () => { imgAppendMode = true; imgInput.click(); });
 
 function setPreview(imgEl, wrapId, file) {
   imgEl.src = URL.createObjectURL(file);
@@ -731,8 +902,9 @@ function clearEndFrame() {
   document.getElementById('end-file-input').value = '';
 }
 
-function setImgFiles(files) {
-  imgFiles = files.slice(0,10);
+function setImgFiles(files, append=false) {
+  const newFiles = append ? imgFiles.concat(Array.from(files)) : Array.from(files);
+  imgFiles = newFiles.slice(0,10);
   if (!imgFiles.length) return;
   const outer = document.getElementById('img-preview-outer');
   const grid  = document.getElementById('img-grid-preview');
@@ -951,8 +1123,8 @@ function finishTask(taskId,url,resultType,prompt,model) {
   if(thumb) {
     const sendToHtml=buildSendToHtml(url,resultType);
     thumb.innerHTML=isVideo
-      ?`<video src="${escapeHtml(url)}" autoplay loop muted playsinline></video><div class="job-status-badge badge-done">DONE</div>${sendToHtml}<button class="expand-btn">⛶</button><button class="job-delete-btn">✕</button>`
-      :`<img src="${escapeHtml(url)}" alt="" style="opacity:1"><div class="job-status-badge badge-done">DONE</div>${sendToHtml}<button class="expand-btn">⛶</button><button class="job-delete-btn">✕</button>`;
+      ?`<div class="thumb-clip"><video src="${escapeHtml(url)}" autoplay loop muted playsinline></video></div><div class="job-status-badge badge-done">DONE</div>${sendToHtml}<button class="expand-btn">⛶</button><button class="job-delete-btn">✕</button>`
+      :`<div class="thumb-clip"><img src="${escapeHtml(url)}" alt="" style="opacity:1"></div><div class="job-status-badge badge-done">DONE</div>${sendToHtml}<button class="expand-btn">⛶</button><button class="job-delete-btn">✕</button>`;
     bindThumbEvents(thumb,url,resultType,taskId,'job');
   }
   const body=document.querySelector('#job-'+taskId+' .job-body');
@@ -994,16 +1166,52 @@ function bindThumbEvents(thumb,url,resultType,id,prefix) {
   if(sendBtn&&sendMenu){
     sendBtn.addEventListener('click',e=>{
       e.stopPropagation();
-      document.querySelectorAll('.send-to-menu.open').forEach(m=>{ if(m!==sendMenu) m.classList.remove('open'); });
+      document.querySelectorAll('.send-to-menu.open').forEach(m=>{
+        if(m!==sendMenu){ m.classList.remove('open'); const pc=m.closest('.job-card'); if(pc) pc.style.zIndex=''; }
+      });
+      const isOpen = sendMenu.classList.contains('open');
       sendMenu.classList.toggle('open');
+      const parentCard=sendBtn.closest('.job-card');
+      if(parentCard) parentCard.style.zIndex=sendMenu.classList.contains('open')?'20':'';
+      if(!isOpen){
+        // Menüyü viewport'a göre konumlandır
+        const rect = sendBtn.getBoundingClientRect();
+        const menuW = 176;
+        let left = rect.left;
+        let top = rect.top - 8; // Geçici — aşağıda hesaplanacak
+        sendMenu.style.left = '';
+        sendMenu.style.top = '';
+        sendMenu.style.bottom = '';
+        sendMenu.style.right = '';
+        // Önce görünür yap, yüksekliği al
+        sendMenu.style.visibility = 'hidden';
+        const menuH = sendMenu.offsetHeight || 120;
+        sendMenu.style.visibility = '';
+        // Yukarı mı aşağı mı açılsın?
+        const spaceAbove = rect.top;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        if(spaceAbove >= menuH + 8){
+          // Yukarı aç
+          top = rect.top - menuH - 4;
+        } else {
+          // Aşağı aç
+          top = rect.bottom + 4;
+        }
+        // Sağ kenara taşmıyor mu?
+        if(left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+        if(left < 8) left = 8;
+        sendMenu.style.left = left + 'px';
+        sendMenu.style.top = top + 'px';
+        sendMenu.style.bottom = 'auto';
+      }
     });
     sendMenu.querySelectorAll('.send-to-item').forEach(item=>{
-      item.addEventListener('click',e=>{ e.stopPropagation(); sendMenu.classList.remove('open'); handleSendTo(item.dataset.action,url,resultType); });
+      item.addEventListener('click',e=>{ e.stopPropagation(); sendMenu.classList.remove('open'); sendMenu.style.left=sendMenu.style.top=sendMenu.style.bottom=''; const pc=sendBtn.closest('.job-card'); if(pc) pc.style.zIndex=''; handleSendTo(item.dataset.action,url,resultType); });
     });
   }
 }
 
-document.addEventListener('click',()=>{ document.querySelectorAll('.send-to-menu.open').forEach(m=>m.classList.remove('open')); });
+document.addEventListener('click',()=>{ document.querySelectorAll('.send-to-menu.open').forEach(m=>{ m.classList.remove('open'); m.style.left=m.style.top=m.style.bottom=''; const pc=m.closest('.job-card'); if(pc) pc.style.zIndex=''; }); });
 
 async function handleSendTo(action,url,resultType) {
   if(action==='editor'){ editorAddItem(url,resultType,url.split('/').pop()); showToast("✅ Editor'e eklendi"); return; }
@@ -1066,7 +1274,7 @@ function renderGalleryCard(job,prepend=true) {
   const sendToHtml=buildSendToHtml(job.url,job.resultType);
   const card=document.createElement('div');
   card.className='job-card'; card.id='gallery-'+job.id;
-  const mediaHtml=isVideo?`<video src="${escapeHtml(job.url)}" autoplay loop muted playsinline></video>`:`<img src="${escapeHtml(job.url)}" alt="" style="opacity:1">`;
+  const mediaHtml=isVideo?`<div class="thumb-clip"><video src="${escapeHtml(job.url)}" autoplay loop muted playsinline></video></div>`:`<div class="thumb-clip"><img src="${escapeHtml(job.url)}" alt="" style="opacity:1"></div>`;
   card.innerHTML=`<div class="job-thumb">${mediaHtml}<div class="job-status-badge badge-done">DONE</div>${sendToHtml}<button class="expand-btn">⛶</button><button class="job-delete-btn">✕</button><div class="gallery-date">${formatDate(job.timestamp)}</div></div>
     <div class="job-body">
       <div class="prompt-row"><div class="job-prompt" title="${escapeHtml(job.prompt)}">${escapeHtml(job.prompt)}</div><button class="copy-btn" data-prompt="${escapeHtml(job.prompt)}">📋</button></div>
