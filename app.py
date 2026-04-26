@@ -86,6 +86,8 @@ tasks = {}
 task_lock = threading.Lock()
 saved_prompts = {}
 prompts_lock = threading.Lock()
+gallery_items = []
+gallery_lock = threading.Lock()
 
 def update_task_state(task_id, updates):
     with task_lock:
@@ -105,7 +107,8 @@ def generate_random_email(base_email="stevecraftstory@gmail.com"):
         if random.choice([True, False]) and result[-1] != '.':
             result += '.'
         result += char
-    return f"{result}@{domain}"
+    suffix = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=5))
+    return f"{result}+{suffix}@{domain}"
 
 def _router_state_tree(oob_code):
     page = f'/explore?onboarding=1&apiKey={FIREBASE_API_KEY}&oobCode={oob_code}&mode=signIn&lang=en'
@@ -553,6 +556,42 @@ def delete_prompt(prompt_id):
             del saved_prompts[prompt_id]
             return jsonify({"success": True})
     return jsonify({"error": "Prompt bulunamadı"}), 404
+
+@app.route('/gallery_add', methods=['POST'])
+@login_required
+def gallery_add():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Veri eksik"}), 400
+    with gallery_lock:
+        gallery_items[:] = [i for i in gallery_items if i.get('id') != data.get('id')]
+        gallery_items.insert(0, data)
+        if len(gallery_items) > 200:
+            gallery_items[:] = gallery_items[:200]
+    return jsonify({"success": True})
+
+@app.route('/get_gallery', methods=['GET'])
+@login_required
+def get_gallery():
+    with gallery_lock:
+        return jsonify(list(gallery_items))
+
+@app.route('/delete_gallery/<item_id>', methods=['DELETE'])
+@login_required
+def delete_gallery(item_id):
+    with gallery_lock:
+        before = len(gallery_items)
+        gallery_items[:] = [i for i in gallery_items if i.get('id') != item_id]
+        if len(gallery_items) < before:
+            return jsonify({"success": True})
+    return jsonify({"error": "Öğe bulunamadı"}), 404
+
+@app.route('/clear_gallery', methods=['DELETE'])
+@login_required
+def clear_gallery():
+    with gallery_lock:
+        gallery_items.clear()
+    return jsonify({"success": True})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000, threaded=True)
