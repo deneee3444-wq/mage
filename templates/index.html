@@ -61,7 +61,7 @@ header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex
 .wrapper { display: grid; grid-template-columns: 380px 1fr; height: 100vh; padding-top: 52px; position: relative; z-index: 1; max-width: 100%; overflow-x: hidden; }
 
 /* ── Left panel ── */
-.panel { background: var(--surface); border-right: 1px solid var(--border); padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; height: calc(100vh - 52px); overflow-y: auto; overflow-x: hidden; }
+.panel { background: var(--surface); border-right: 1px solid var(--border); padding: 1rem; display: flex; flex-direction: column; align-items: stretch; gap: 0.75rem; height: calc(100vh - 52px); overflow-y: auto; overflow-x: hidden; }
 .panel::-webkit-scrollbar { width: 3px; }
 .panel::-webkit-scrollbar-track { background: transparent; }
 .panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -115,15 +115,16 @@ header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex
 .frame-badge { position: absolute; bottom: 6px; left: 6px; display: none; background: rgba(200,255,0,0.15); border: 1px solid rgba(200,255,0,0.35); color: var(--accent); font-family: var(--font-mono); font-size: 0.56rem; letter-spacing: 0.08em; padding: 2px 7px; border-radius: 2px; z-index: 2; }
 
 /* ── Fields ── */
-.field { display: flex; flex-direction: column; gap: 0.3rem; }
+.field { display: flex; flex-direction: column; gap: 0.3rem; width: 100%; }
 label { font-family: var(--font-mono); font-size: 0.63rem; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
 
 /* ── Textarea: fixed height + scrollbar ── */
 textarea {
   background: var(--card); border: 1px solid var(--border); color: var(--text);
   border-radius: 6px; font-family: var(--font-body); font-size: 0.875rem;
-  padding: 0.6rem 0.85rem; transition: border-color 0.2s; outline: none; width: 100%;
-  resize: none; height: 88px; overflow-y: auto; line-height: 1.55;
+  padding: 0.6rem 0.85rem; transition: border-color 0.2s; outline: none;
+  width: 100%; max-width: 100%; display: block; box-sizing: border-box;
+  resize: none; height: 88px; min-height: 88px; overflow-y: auto; line-height: 1.55;
   scrollbar-width: thin; scrollbar-color: var(--border) transparent;
 }
 textarea:focus { border-color: var(--accent); }
@@ -207,9 +208,9 @@ select:focus { border-color: var(--accent); }
 
 /* ── Job cards ── */
 .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.85rem; }
-.job-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; animation: fadeUp 0.3s ease both; transition: border-color 0.2s; }
+.job-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; animation: fadeIn 0.3s ease forwards; transition: border-color 0.2s; }
 .job-card:hover { border-color: var(--muted); }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 /* overflow: visible — menünün kart dışına taşmasına izin ver */
 .job-thumb { aspect-ratio: 16/9; background: var(--surface); position: relative; overflow: visible; }
 /* Medyayı sadece bu wrapper clip'ler */
@@ -233,16 +234,11 @@ select:focus { border-color: var(--accent); }
 .send-to-wrap { position: absolute; bottom: 8px; left: 8px; z-index: 4; }
 .send-to-btn { background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.75); width: 26px; height: 26px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; transition: all 0.15s; backdrop-filter: blur(4px); font-family: var(--font-mono); }
 .send-to-btn:hover { background: rgba(200,255,0,0.2); border-color: var(--accent); color: var(--accent); }
-.send-to-menu { display: none; position: absolute; bottom: 32px; left: 0; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0; min-width: 170px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); z-index: 10; }
+.send-to-menu { display: none; position: fixed; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0; min-width: 170px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); z-index: 9000; }
 .send-to-menu.open { display: block; }
 .send-to-item { display: block; width: 100%; padding: 0.55rem 0.85rem; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; color: var(--muted); background: none; border: none; cursor: pointer; text-align: left; transition: all 0.12s; white-space: nowrap; min-height: 36px; }
 .send-to-item:hover { color: var(--accent); background: rgba(200,255,0,0.06); }
 .send-to-divider { height: 1px; background: var(--border); margin: 0.25rem 0; }
-/* Menü açıkken job-thumb ve job-card overflow:hidden'ı kaldır — menü kesilmesin */
-.job-thumb:has(.send-to-menu.open) { overflow: visible; z-index: 5; }
-.job-card:has(.send-to-menu.open) { overflow: visible; }
-/* Send-to menu fixed positioning (JS ile atanıyor) */
-.send-to-menu.open { position: fixed; display: block; z-index: 9000; }
 
 /* ── Card body ── */
 .job-body { padding: 0.75rem; }
@@ -257,7 +253,7 @@ select:focus { border-color: var(--accent); }
 .log-line.latest { color: var(--accent); }
 .btn-download { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; padding: 0.5rem; margin-top: 0.5rem; background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.08em; text-decoration: none; cursor: pointer; transition: all 0.15s; }
 .btn-download:hover { background: var(--accent); color: #000; }
-.gallery-date { position: absolute; bottom: 8px; right: 40px; font-family: var(--font-mono); font-size: 0.52rem; color: rgba(255,255,255,0.35); letter-spacing: 0.04em; pointer-events: none; }
+.gallery-date { position: absolute; bottom: 8px; right: 40px; font-family: var(--font-mono); font-size: 0.52rem; color: rgba(255,255,255,0.72); letter-spacing: 0.04em; pointer-events: none; text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
 
 /* ── Editor tab ── */
 .editor-layout { display: grid; grid-template-columns: 240px 1fr; gap: 1rem; height: calc(100vh - 52px - 45px - 2.5rem); min-height: 400px; }
@@ -350,9 +346,12 @@ select:focus { border-color: var(--accent); }
   /* Sol panel: sabit yükseklik kalkıyor */
   .panel {
     height: auto;
-    overflow-y: visible;
+    overflow-x: hidden;
+    overflow-y: auto;
     border-right: none;
     border-bottom: 1px solid var(--border);
+    width: 100%;
+    max-width: 100%;
   }
 
   /* Sağ panel */
@@ -410,13 +409,14 @@ select:focus { border-color: var(--accent); }
   }
   .tab-bar-actions { padding-right: 0; }
 
-  /* Send-to menü: yukarı değil, aşağı açılır (ekrandan taşmasın) */
-  .send-to-menu {
-    bottom: auto;
-    top: 32px;
-    left: auto;
-    right: 0;
-  }
+  /* Textarea + field: mobilde tam genişlik, buton hizasında */
+  .field { width: 100%; max-width: 100%; box-sizing: border-box; align-self: stretch; }
+  textarea { height: 120px; min-height: 120px; width: 100% !important; max-width: 100% !important; box-sizing: border-box; display: block; align-self: stretch; }
+
+  /* Prompt lib input: tam genişlik */
+  .prompt-lib-header { flex-direction: column; align-items: stretch; }
+  .prompt-lib-input { width: 100% !important; flex: none; box-sizing: border-box; }
+  .prompt-lib-save-btn { width: 100%; }
 }
 
 /* Küçük mobil (≤ 540px) */
@@ -428,6 +428,10 @@ select:focus { border-color: var(--accent); }
 
   /* Panel doldur */
   .panel { padding: 0.75rem; gap: 0.6rem; }
+
+  /* Prompt textarea mobilde daha uzun, tam genişlik */
+  textarea { height: 140px; min-height: 140px; font-size: 0.95rem; width: 100% !important; max-width: 100% !important; box-sizing: border-box; align-self: stretch; }
+  .field { width: 100%; max-width: 100%; box-sizing: border-box; align-self: stretch; }
 
   /* Login kart daha kompakt */
   .login-card { padding: 2rem 1.25rem; }
@@ -475,7 +479,8 @@ select:focus { border-color: var(--accent); }
   .tab-count { display: none; }
 
   /* Prompt lib header dar ekranda alt alta */
-  .prompt-lib-header { flex-direction: column; }
+  .prompt-lib-header { flex-direction: column; align-items: stretch; }
+  .prompt-lib-input { width: 100% !important; flex: none; box-sizing: border-box; }
   .prompt-lib-save-btn { width: 100%; text-align: center; }
 
   /* Modal tam ekran */
@@ -699,7 +704,7 @@ select:focus { border-color: var(--accent); }
       <button class="tab-btn" data-tab="prompts">PROMPTS <span class="tab-count" id="prompts-count">0</span></button>
       <div class="tab-bar-actions">
         <button class="btn-clear-all" id="clear-gen-btn" style="display:none">✕ TEMİZLE</button>
-        <button class="btn-clear-all" id="clear-gallery-btn" style="display:none">✕ GALERİYİ SİL</button>
+        <button class="btn-clear-all" id="clear-gallery-btn" style="display:none">✕ TEMİZLE</button>
       </div>
     </div>
 
@@ -748,7 +753,7 @@ select:focus { border-color: var(--accent); }
             <button class="editor-play-btn" id="editor-play-btn" disabled>▶ OYNAT</button>
             <div class="editor-progress"><div class="editor-progress-fill" id="editor-progress-fill"></div></div>
             <span class="editor-counter" id="editor-counter">0 / 0</span>
-            <button class="editor-clear-btn" id="editor-clear-btn">✕ Temizle</button>
+            <button class="editor-clear-btn" id="editor-clear-btn">✕ TEMİZLE</button>
           </div>
         </div>
       </div>
@@ -807,9 +812,6 @@ let selNanoAspect  = '16:9';
 let audioEnabled   = true; // DEFAULT ON
 
 let activeTasks = {};
-const TASKS_KEY   = 'mage_tasks_v1';
-const GALLERY_KEY = 'mage_gallery_v1';
-const PROMPTS_KEY = 'mage_prompts_v1';
 
 let editorPlaylist = [];
 let editorIndex = 0;
@@ -1004,9 +1006,9 @@ clearGenBtn.addEventListener('click', () => {
   activeTasks = {}; persistTasks(); updateGenCount();
   document.getElementById('empty-state').style.display = '';
 });
-clearGalBtn.addEventListener('click', () => {
+clearGalBtn.addEventListener('click', async () => {
   if (!confirm('Galeri silinsin mi?')) return;
-  try { localStorage.removeItem(GALLERY_KEY); } catch(e) {}
+  await fetch('/clear_gallery', {method:'DELETE'});
   document.getElementById('gallery-grid').innerHTML = '';
   updateGalleryCount();
 });
@@ -1056,7 +1058,7 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
   }
 });
 
-function persistTasks() { try { localStorage.setItem(TASKS_KEY,JSON.stringify(activeTasks)); } catch(e) {} }
+function persistTasks() { /* tasks sunucu RAM'inde tutulur */ }
 function updateGenCount() { document.getElementById('gen-count').textContent = Object.keys(activeTasks).length; }
 
 function createJobCard(taskId, prompt, model, mode, file) {
@@ -1162,65 +1164,75 @@ function bindThumbEvents(thumb,url,resultType,id,prefix) {
       } else { deleteGalleryItem(id); updateGalleryCount(); }
     }
   });
-  const sendBtn=thumb.querySelector('.send-to-btn'), sendMenu=thumb.querySelector('.send-to-menu');
-  if(sendBtn&&sendMenu){
+  const sendBtn=thumb.querySelector('.send-to-btn');
+  if(sendBtn){
     sendBtn.addEventListener('click',e=>{
       e.stopPropagation();
-      document.querySelectorAll('.send-to-menu.open').forEach(m=>{
-        if(m!==sendMenu){ m.classList.remove('open'); const pc=m.closest('.job-card'); if(pc) pc.style.zIndex=''; }
-      });
-      const isOpen = sendMenu.classList.contains('open');
-      sendMenu.classList.toggle('open');
-      const parentCard=sendBtn.closest('.job-card');
-      if(parentCard) parentCard.style.zIndex=sendMenu.classList.contains('open')?'20':'';
-      if(!isOpen){
-        // Menüyü viewport'a göre konumlandır
-        const rect = sendBtn.getBoundingClientRect();
-        const menuW = 176;
-        let left = rect.left;
-        let top = rect.top - 8; // Geçici — aşağıda hesaplanacak
-        sendMenu.style.left = '';
-        sendMenu.style.top = '';
-        sendMenu.style.bottom = '';
-        sendMenu.style.right = '';
-        // Önce görünür yap, yüksekliği al
-        sendMenu.style.visibility = 'hidden';
-        const menuH = sendMenu.offsetHeight || 120;
-        sendMenu.style.visibility = '';
-        // Yukarı mı aşağı mı açılsın?
-        const spaceAbove = rect.top;
-        const spaceBelow = window.innerHeight - rect.bottom;
-        if(spaceAbove >= menuH + 8){
-          // Yukarı aç
-          top = rect.top - menuH - 4;
-        } else {
-          // Aşağı aç
-          top = rect.bottom + 4;
-        }
-        // Sağ kenara taşmıyor mu?
-        if(left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
-        if(left < 8) left = 8;
-        sendMenu.style.left = left + 'px';
-        sendMenu.style.top = top + 'px';
-        sendMenu.style.bottom = 'auto';
-      }
-    });
-    sendMenu.querySelectorAll('.send-to-item').forEach(item=>{
-      item.addEventListener('click',e=>{ e.stopPropagation(); sendMenu.classList.remove('open'); sendMenu.style.left=sendMenu.style.top=sendMenu.style.bottom=''; const pc=sendBtn.closest('.job-card'); if(pc) pc.style.zIndex=''; handleSendTo(item.dataset.action,url,resultType); });
+      if(_portalTarget===sendBtn){ closeSendToPortal(); return; }
+      openSendToPortal(sendBtn, url, resultType);
     });
   }
 }
 
-document.addEventListener('click',()=>{ document.querySelectorAll('.send-to-menu.open').forEach(m=>{ m.classList.remove('open'); m.style.left=m.style.top=m.style.bottom=''; const pc=m.closest('.job-card'); if(pc) pc.style.zIndex=''; }); });
+// ── Send-to Portal ──
+// Menüyü body'ye taşıyarak CSS stacking context sorunlarını önle
+let _portalMenu = null;
+let _portalTarget = null;
+
+function closeSendToPortal() {
+  if (_portalMenu) { _portalMenu.remove(); _portalMenu = null; _portalTarget = null; }
+}
+
+function openSendToPortal(sendBtn, url, resultType) {
+  closeSendToPortal();
+  const rect = sendBtn.getBoundingClientRect();
+  const MENU_W = 176;
+  const MENU_H = 170;
+  let left = rect.left;
+  let top = (window.innerHeight - rect.bottom >= MENU_H + 8) ? rect.bottom + 4 : rect.top - MENU_H - 4;
+  if (left + MENU_W > window.innerWidth - 8) left = window.innerWidth - MENU_W - 8;
+  if (left < 8) left = 8;
+  if (top < 8) top = 8;
+
+  const menu = document.createElement('div');
+  menu.className = 'send-to-menu open';
+  menu.style.cssText = `position:fixed;left:${left}px;top:${top}px;z-index:99999;`;
+  const eu = escapeHtml(url);
+  menu.innerHTML = `
+    <button class="send-to-item" data-action="start">→ Start Frame</button>
+    <button class="send-to-item" data-action="end">→ End Frame</button>
+    <div class="send-to-divider"></div>
+    <button class="send-to-item" data-action="image">→ Image Input</button>
+    <div class="send-to-divider"></div>
+    <button class="send-to-item" data-action="editor">+ Editor'e Ekle</button>`;
+  menu.querySelectorAll('.send-to-item').forEach(item => {
+    item.addEventListener('click', e => {
+      e.stopPropagation();
+      closeSendToPortal();
+      handleSendTo(item.dataset.action, url, resultType);
+    });
+  });
+  document.body.appendChild(menu);
+  _portalMenu = menu;
+  _portalTarget = sendBtn;
+}
+
+document.addEventListener('click', e => {
+  if (_portalMenu && !_portalMenu.contains(e.target) && e.target !== _portalTarget) {
+    closeSendToPortal();
+  }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSendToPortal(); });
+window.addEventListener('scroll', closeSendToPortal, true);
 
 async function handleSendTo(action,url,resultType) {
   if(action==='editor'){ editorAddItem(url,resultType,url.split('/').pop()); showToast("✅ Editor'e eklendi"); return; }
   showToast('⏳ Aktarılıyor...');
   try {
     let file = resultType==='image' ? await fetchAsFile(url,'result.jpg') : await captureVideoFirstFrame(url);
-    if(action==='start'){setStartFrame(file,true); if(activeMode!=='video') switchMode('video'); showToast('✅ Start Frame olarak ayarlandı');}
-    else if(action==='end'){setEndFrame(file,true); if(activeMode!=='video') switchMode('video'); showToast('✅ End Frame olarak ayarlandı');}
-    else if(action==='image'){setImgFiles([file]); if(activeMode!=='image') switchMode('image'); showToast('✅ Görsel alanına aktarıldı');}
+    if(action==='start'){setStartFrame(file,true); showToast('✅ Start Frame olarak ayarlandı');}
+    else if(action==='end'){setEndFrame(file,true); showToast('✅ End Frame olarak ayarlandı');}
+    else if(action==='image'){setImgFiles([file]); showToast('✅ Görsel alanına aktarıldı');}
   } catch(e){ showToast('❌ Aktarım başarısız: '+e.message); }
 }
 
@@ -1246,26 +1258,25 @@ async function captureVideoFirstFrame(url) {
 }
 
 // ── Gallery ──
-function loadGallery() {
-  let items=[]; try{items=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');}catch(e){}
-  items.forEach(j=>renderGalleryCard(j,false)); updateGalleryCount();
+async function loadGallery() {
+  try {
+    const res = await fetch('/get_gallery');
+    const items = await res.json();
+    items.forEach(j=>renderGalleryCard(j,false)); updateGalleryCount();
+  } catch(e) {}
 }
-function saveToGallery(job) {
-  let items=[]; try{items=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');}catch(e){}
-  items=items.filter(i=>i.id!==job.id); items.unshift(job);
-  if(items.length>100) items=items.slice(0,100);
-  try{localStorage.setItem(GALLERY_KEY,JSON.stringify(items));}catch(e){}
+async function saveToGallery(job) {
+  try { await fetch('/gallery_add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(job)}); } catch(e) {}
   renderGalleryCard(job,true); updateGalleryCount();
 }
-function deleteGalleryItem(id) {
-  let items=[]; try{items=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');}catch(e){}
-  items=items.filter(i=>i.id!==id); try{localStorage.setItem(GALLERY_KEY,JSON.stringify(items));}catch(e){}
+async function deleteGalleryItem(id) {
+  try { await fetch('/delete_gallery/'+id,{method:'DELETE'}); } catch(e) {}
 }
 function updateGalleryCount() {
-  let items=[]; try{items=JSON.parse(localStorage.getItem(GALLERY_KEY)||'[]');}catch(e){}
-  document.getElementById('gallery-count').textContent=items.length;
+  const count = document.getElementById('gallery-grid').children.length;
+  document.getElementById('gallery-count').textContent = count;
   const empty=document.getElementById('gallery-empty');
-  if(empty) empty.style.display=items.length>0?'none':'';
+  if(empty) empty.style.display=count>0?'none':'';
 }
 function renderGalleryCard(job,prepend=true) {
   document.getElementById('gallery-empty').style.display='none';
@@ -1288,18 +1299,20 @@ function renderGalleryCard(job,prepend=true) {
 }
 
 // ── Prompt Library ──
-function getPrompts() { try{return JSON.parse(localStorage.getItem(PROMPTS_KEY)||'[]');}catch(e){return [];} }
-function savePrompts(arr) { try{localStorage.setItem(PROMPTS_KEY,JSON.stringify(arr));}catch(e){} }
-function updatePromptsCount() { document.getElementById('prompts-count').textContent=getPrompts().length; }
+async function fetchPrompts() {
+  try { const r=await fetch('/get_prompts'); return await r.json(); } catch(e) { return []; }
+}
+function updatePromptsCount(count) { document.getElementById('prompts-count').textContent = count || 0; }
 
-function renderPromptLibrary() {
+async function renderPromptLibrary() {
   const list=document.getElementById('prompt-library-list');
   const empty=document.getElementById('prompt-lib-empty');
   Array.from(list.children).forEach(c=>{ if(c.id!=='prompt-lib-empty') c.remove(); });
-  const prompts=getPrompts();
-  if(!prompts.length){ if(empty) empty.style.display=''; updatePromptsCount(); return; }
+  const prompts=await fetchPrompts();
+  updatePromptsCount(prompts.length);
+  if(!prompts.length){ if(empty) empty.style.display=''; return; }
   if(empty) empty.style.display='none';
-  prompts.forEach((p,i)=>{
+  prompts.forEach((p)=>{
     const card=document.createElement('div'); card.className='prompt-lib-card';
     card.innerHTML=`<div class="prompt-lib-text">${escapeHtml(p.text)}</div>
       <div class="prompt-lib-actions">
@@ -1310,20 +1323,19 @@ function renderPromptLibrary() {
       document.getElementById('prompt').value=p.text;
       showToast('✅ Prompt alana aktarıldı');
     });
-    card.querySelector('.plib-btn.del').addEventListener('click',()=>{
-      const arr=getPrompts(); arr.splice(i,1); savePrompts(arr);
-      renderPromptLibrary(); updatePromptsCount();
+    card.querySelector('.plib-btn.del').addEventListener('click',async ()=>{
+      await fetch('/delete_prompt/'+p.id,{method:'DELETE'});
+      renderPromptLibrary();
     });
     list.appendChild(card);
   });
-  updatePromptsCount();
 }
 
-document.getElementById('prompt-lib-save-btn').addEventListener('click',()=>{
+document.getElementById('prompt-lib-save-btn').addEventListener('click',async ()=>{
   const inp=document.getElementById('prompt-lib-input');
   const text=inp.value.trim(); if(!text){showToast('⚠️ Prompt girin.');return;}
-  const arr=getPrompts(); arr.unshift({text,ts:Date.now()}); savePrompts(arr);
-  inp.value=''; renderPromptLibrary(); updatePromptsCount(); showToast('✅ Prompt kaydedildi!');
+  await fetch('/save_prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+  inp.value=''; renderPromptLibrary(); showToast('✅ Prompt kaydedildi!');
 });
 
 // ── Editor ──
@@ -1441,8 +1453,8 @@ async function captureCurrentFrame(target) {
     } catch(corsErr) { file=await captureFrameAtTime(currentModalUrl,seekTime); }
     closeModal();
     setTimeout(()=>{
-      if(target==='start'){setStartFrame(file,true);if(activeMode!=='video')switchMode('video');}
-      else {setEndFrame(file,true);if(activeMode!=='video')switchMode('video');}
+      if(target==='start'){setStartFrame(file,true);}
+      else {setEndFrame(file,true);}
       showToast(`📷 ${formatTime(seekTime)} → ${target==='start'?'Start':'End'} Frame`);
     },300);
   } catch(e){ showToast('❌ Frame alınamadı: '+e.message); }
@@ -1462,9 +1474,18 @@ async function captureFrameAtTime(url,seekTime) {
 document.getElementById('capture-start-btn').addEventListener('click',()=>captureCurrentFrame('start'));
 document.getElementById('capture-end-btn').addEventListener('click',()=>captureCurrentFrame('end'));
 
-function restoreActiveTasks() {
-  let saved={}; try{saved=JSON.parse(localStorage.getItem(TASKS_KEY)||'{}');}catch(e){}
-  Object.keys(saved).forEach(taskId=>{ const {prompt,model,mode}=saved[taskId]; activeTasks[taskId]={prompt,model,mode}; createJobCard(taskId,prompt,model,mode,null); pollTask(taskId); });
+async function restoreActiveTasks() {
+  try {
+    const res = await fetch('/get_tasks');
+    const serverTasks = await res.json();
+    Object.entries(serverTasks).forEach(([taskId, task]) => {
+      if (task.status !== 'Tamamlandı' && task.status !== 'Hata') {
+        activeTasks[taskId] = {prompt: task.prompt||'', model: task.model||'', mode: task.mode||'video'};
+        createJobCard(taskId, task.prompt||'', task.model||'', task.mode||'video', null);
+        pollTask(taskId);
+      }
+    });
+  } catch(e) {}
   updateGenCount();
 }
 
