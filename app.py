@@ -3,18 +3,14 @@ import re
 import base64
 import time
 import json
-import random
 import requests
 import threading
 import uuid
 import urllib.parse
 import functools
+from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs
 from flask import Flask, render_template, request, jsonify, Response, session, redirect, url_for
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
 
 app = Flask(__name__)
 app.secret_key = 'mage_studio_local_secret_2024'
@@ -36,7 +32,247 @@ def login_required(f):
 # ── Ayarlar ────────────────────────────────────────────────
 FIREBASE_API_KEY = "AIzaSyAzUV2NNUOlLTL04jwmUw9oLhjteuv6Qr4"
 CONTINUE_URL     = "https://www.mage.space/explore?onboarding=1"
-SCOPES           = ["https://www.googleapis.com/auth/gmail.readonly"]
+
+# ── Temp-Mail Sabitleri ────────────────────────────────────
+POLL_COMPONENTS = [
+    'frontend.components.action',
+    'frontend.components.token-login',
+    'frontend.components.check-mail',
+    'frontend.components.inbox-message',
+]
+
+TEMPMAIL_INIT_HEADERS = {
+    'Accept': ('text/html,application/xhtml+xml,application/xml;q=0.9,'
+               'image/avif,image/webp,image/apng,*/*;q=0.8,'
+               'application/signed-exchange;v=b3;q=0.7'),
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Language': 'tr-TR,tr;q=0.9',
+    'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                   'AppleWebKit/537.36 (KHTML, like Gecko) '
+                   'Chrome/147.0.0.0 Safari/537.36'),
+    'sec-ch-ua': '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'document',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-site': 'none',
+    'sec-fetch-user': '?1',
+    'upgrade-insecure-requests': '1',
+}
+
+TEMPMAIL_LW_HEADERS = {
+    'Accept': '*/*',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Language': 'tr-TR,tr;q=0.9',
+    'Content-Type': 'application/json',
+    'Origin': 'https://temp-mail.asia',
+    'Referer': 'https://temp-mail.asia/',
+    'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                   'AppleWebKit/537.36 (KHTML, like Gecko) '
+                   'Chrome/147.0.0.0 Safari/537.36'),
+    'x-livewire': '1',
+    'sec-ch-ua': '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+}
+
+
+def _tm_get_csrf_and_email(html: str):
+    """HTML'den data-csrf token ve email adresini çek."""
+    csrf_match = re.search(r'data-csrf=["\']([^"\']+)["\']', html)
+    email_match = re.search(r"const email\s*=\s*'([^']+)'", html)
+    csrf = csrf_match.group(1) if csrf_match else None
+    email = email_match.group(1) if email_match else None
+    return csrf, email
+
+
+def _tm_extract_livewire_components(html: str):
+    """Sayfadaki tüm Livewire bileşenlerini bul, snapshot'larını döndür."""
+    soup = BeautifulSoup(html, 'html.parser')
+    components = {}
+    for el in soup.find_all(attrs={'wire:snapshot': True}):
+        raw_snapshot = el.get('wire:snapshot', '')
+        try:
+            snap_data = json.loads(raw_snapshot)
+            name = snap_data.get('memo', {}).get('name', '')
+        except Exception:
+            name = ''
+        if name:
+            components[name] = {'snapshot': raw_snapshot, 'name': name}
+    return components
+
+
+def _tm_build_poll_payload(csrf: str, components: dict, email: str):
+    """Mesaj kontrolü için livewire/update payload'ı oluştur."""
+    api_components = []
+    for name in POLL_COMPONENTS:
+        comp = components.get(name)
+        if not comp:
+            continue
+        if name == 'frontend.components.inbox-message':
+            calls = [
+                {"method": "__dispatch", "params": ["syncEmail", {"email": email}], "metadata": {}},
+                {"method": "__dispatch", "params": ["fetchMessages", {}], "metadata": {}},
+            ]
+        else:
+            calls = [
+                {"method": "__dispatch", "params": ["syncEmail", {"email": email}], "metadata": {}},
+            ]
+        api_components.append({
+            "snapshot": comp['snapshot'],
+            "updates": {},
+            "calls": calls,
+        })
+    return {"_token": csrf, "components": api_components}
+
+
+def _tm_extract_mage_url(text: str):
+    """İçerik metninden mage.space sign-in URL'sini çek."""
+    soup = BeautifulSoup(text, 'html.parser')
+    for a in soup.find_all('a', href=True):
+        href = a['href']
+        if 'mage.space' in href and ('signIn' in href or 'oobCode' in href):
+            return href
+    pattern = r"href=['\"]?(https?://(?:www\.)?mage\.space/[^'\">\s]+)['\"]?"
+    match = re.search(pattern, text)
+    if match:
+        return match.group(1).replace('\\/', '/')
+    return None
+
+
+def _tm_parse_inbox_keys(snapshot_str: str):
+    """snapshot JSON'undan inbox_messages key listesini çek."""
+    try:
+        snap = json.loads(snapshot_str)
+        inbox_msgs = snap.get('data', {}).get('inbox_messages', [])
+        if isinstance(inbox_msgs, list):
+            for item in inbox_msgs:
+                if isinstance(item, dict) and 'keys' in item:
+                    return item['keys']
+    except Exception:
+        pass
+    return []
+
+
+def _tempmail_init():
+    """
+    temp-mail.asia'ya bağlanır, geçici e-posta + oturum bilgilerini döndürür.
+    Döner: (email, csrf, components, tm_session)
+    """
+    tm_session = requests.Session()
+    r = tm_session.get('https://temp-mail.asia/', headers=TEMPMAIL_INIT_HEADERS, timeout=30)
+    r.raise_for_status()
+    html = r.text
+
+    csrf, email = _tm_get_csrf_and_email(html)
+    if not csrf or not email:
+        raise Exception("Temp-mail: data-csrf veya email HTML'de bulunamadı!")
+
+    components = _tm_extract_livewire_components(html)
+    return email, csrf, components, tm_session
+
+
+def _tempmail_poll_for_magic_link(email, csrf, components, tm_session, log_fn=None):
+    """
+    Gelen kutusunu poll eder ve Mage.space sign-in URL'sini döndürür.
+    """
+    def _log(msg):
+        if log_fn:
+            log_fn(msg)
+
+    inbox_snapshot = None
+    inbox_keys = []
+
+    for _ in range(24):   # 24 × 5s = 120s
+        payload = _tm_build_poll_payload(csrf, components, email)
+        resp = tm_session.post(
+            'https://temp-mail.asia/livewire/update',
+            headers=TEMPMAIL_LW_HEADERS,
+            json=payload,
+            timeout=30,
+        )
+        if not resp.ok:
+            time.sleep(10)
+            continue
+
+        data = resp.json()
+        resp_comps = data.get('components', [])
+        active_names = [n for n in POLL_COMPONENTS if n in components]
+
+        for i, rc in enumerate(resp_comps):
+            new_snap = rc.get('snapshot', '')
+            if not new_snap or i >= len(active_names):
+                continue
+            target_name = active_names[i]
+            components[target_name]['snapshot'] = new_snap
+
+            if target_name == 'frontend.components.inbox-message':
+                keys = _tm_parse_inbox_keys(new_snap)
+                if keys:
+                    inbox_keys = keys
+                    inbox_snapshot = new_snap
+
+        if inbox_keys:
+            _log(f"✉  Mail geldi! ID: {inbox_keys[0]}")
+            break
+
+        time.sleep(5)
+
+    if not inbox_keys:
+        raise Exception("❌ Mage magic link maili gelmedi (120s zaman aşımı).")
+
+    # Mesaj içeriğini oku
+    msg_id = inbox_keys[0]
+    view_payload = {
+        "_token": csrf,
+        "components": [{
+            "snapshot": inbox_snapshot,
+            "updates": {},
+            "calls": [{"method": "updateView", "params": [msg_id], "metadata": {}}],
+        }],
+    }
+    view_resp = tm_session.post(
+        'https://temp-mail.asia/livewire/update',
+        headers=TEMPMAIL_LW_HEADERS,
+        json=view_payload,
+        timeout=30,
+    )
+    view_resp.raise_for_status()
+    view_data = view_resp.json()
+
+    sign_in_url = None
+    for comp_resp in view_data.get('components', []):
+        snap_str = comp_resp.get('snapshot', '')
+        if snap_str:
+            try:
+                snap = json.loads(snap_str)
+                messages_outer = snap.get('data', {}).get('messages', [])
+                if messages_outer and isinstance(messages_outer[0], list):
+                    for msg_group in messages_outer[0]:
+                        if isinstance(msg_group, list):
+                            for msg in msg_group:
+                                if isinstance(msg, dict) and 'content' in msg:
+                                    sign_in_url = _tm_extract_mage_url(msg['content'])
+                                    if sign_in_url:
+                                        break
+                        if sign_in_url:
+                            break
+            except Exception:
+                pass
+        if not sign_in_url:
+            effects_html = comp_resp.get('effects', {}).get('html', '')
+            if effects_html:
+                sign_in_url = _tm_extract_mage_url(effects_html)
+        if sign_in_url:
+            break
+
+    if not sign_in_url:
+        raise Exception("❌ Mage sign-in URL'si mail içinde bulunamadı.")
+
+    return sign_in_url
 
 FIREBASE_HEADERS = {
     "Content-Type": "application/json",
@@ -100,16 +336,6 @@ def log_task(task_id, message):
             print(f"[{task_id[:8]}] {message}")
             tasks[task_id]['logs'].append(message)
 
-def generate_random_email(base_email="stevecraftstory@gmail.com"):
-    name, domain = base_email.split('@')
-    result = name[0]
-    for char in name[1:]:
-        if random.choice([True, False]) and result[-1] != '.':
-            result += '.'
-        result += char
-    suffix = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=5))
-    return f"{result}+{suffix}@{domain}"
-
 def _router_state_tree(oob_code):
     page = f'/explore?onboarding=1&apiKey={FIREBASE_API_KEY}&oobCode={oob_code}&mode=signIn&lang=en'
     page_key = f'__PAGE__?{{"onboarding":"1","apiKey":"{FIREBASE_API_KEY}","oobCode":"{oob_code}","mode":"signIn","lang":"en"}}'
@@ -155,66 +381,30 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
         if task_id not in tasks: return
         update_task_state(task_id, {'status': "Çalışıyor"})
 
-        email = generate_random_email()
-        log_task(task_id, f"🎯 Kullanılan Email: {email}")
-
         session_req = requests.Session()
         session_req.headers.update({"user-agent": MAGE_HEADERS_BASE["user-agent"]})
 
-        log_task(task_id, "📨 ADIM 1: Magic link gönderiliyor...")
+        # ── ADIM 1: Geçici e-posta al ──────────────────────────────────────
+        log_task(task_id, "📬 ADIM 1: Geçici e-posta alınıyor...")
+        email, csrf, tm_components, tm_session = _tempmail_init()
+        log_task(task_id, f"🎯 Kullanılan Email: {email}")
+
+        # ── ADIM 2: Magic link gönder ───────────────────────────────────────
+        log_task(task_id, "📨 ADIM 2: Magic link gönderiliyor...")
         url_a1 = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={FIREBASE_API_KEY}"
         req_a1 = requests.post(url_a1, headers=FIREBASE_HEADERS, json={
             "requestType": "EMAIL_SIGNIN", "email": email, "clientType": "CLIENT_TYPE_WEB",
             "continueUrl": CONTINUE_URL, "canHandleCodeInApp": True
         })
-        if req_a1.status_code != 200: raise Exception(f"Adım 1 Hatası: {req_a1.text}")
+        if req_a1.status_code != 200: raise Exception(f"Adım 2 Hatası: {req_a1.text}")
         if task_id not in tasks: return
 
-        log_task(task_id, "📬 ADIM 2: Gmail bağlantısı kuruluyor...")
-        creds = None
-        if os.path.exists("token.json"): creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token: creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-                creds = flow.run_local_server(port=0)
-            with open("token.json", "w") as token: token.write(creds.to_json())
-        service = build("gmail", "v1", credentials=creds)
-
-        log_task(task_id, "⏳ Magic link bekleniyor (Maks 120s)...")
-        magic_url = None
-
-        def govdeden_link_cek(mesaj):
-            def parcalari_tara(payload):
-                body_data = payload.get("body", {}).get("data", "")
-                if body_data:
-                    metin = base64.urlsafe_b64decode(body_data).decode("utf-8", errors="ignore")
-                    eslesen = re.findall(r'https://www\.mage\.space/[^\s"\'<>]+oobCode=[^\s"\'<>&]+(?:&[^\s"\'<>]*)*', metin)
-                    if eslesen: return eslesen[0]
-                for part in payload.get("parts", []):
-                    sonuc = parcalari_tara(part)
-                    if sonuc: return sonuc
-                return None
-            return parcalari_tara(mesaj["payload"])
-
-        for deneme in range(24):
-            if task_id not in tasks: return
-            time.sleep(5)
-            sonuc = service.users().messages().list(userId="me", q='subject:"Sign in to" newer_than:1d', maxResults=10).execute()
-            for msg in sonuc.get("messages", []):
-                detay = service.users().messages().get(userId="me", id=msg["id"], format="full").execute()
-                headers = {h["name"]: h["value"] for h in detay["payload"]["headers"]}
-                is_target_email = email.lower() in headers.get("To", "").lower()
-                is_mage_mail = "Sign in to" in headers.get("Subject", "") and ("mage" in headers.get("Subject", "").lower() or "mage.space" in headers.get("From", "").lower())
-                if is_mage_mail and is_target_email:
-                    bulunan_link = govdeden_link_cek(detay)
-                    if bulunan_link:
-                        magic_url = bulunan_link.replace("&amp;", "&")
-                        break
-            if magic_url: break
-
-        if not magic_url: raise Exception("❌ Mage magic link maili gelmedi.")
-        if task_id not in tasks: return
+        # ── ADIM 3: Temp-mail'i poll et, magic link'i bekle ────────────────
+        log_task(task_id, "⏳ ADIM 3: Magic link bekleniyor (Maks 120s)...")
+        magic_url = _tempmail_poll_for_magic_link(
+            email, csrf, tm_components, tm_session,
+            log_fn=lambda msg: log_task(task_id, msg)
+        )
         log_task(task_id, "🔗 Magic link bulundu!")
 
         params = parse_qs(urlparse(magic_url).query)
@@ -227,7 +417,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
 
         log_task(task_id, "🍪 ADIM 6b: Session cookie alınıyor...")
         url_base = f"https://www.mage.space/explore?onboarding=1&apiKey={FIREBASE_API_KEY}&oobCode={oob_code}&mode=signIn&lang=en"
-        h_6b = {**MAGE_HEADERS_BASE, "next-action": "4054c40ba429ef3e5e1d42ad95e138aff0a501ce3d", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
+        h_6b = {**MAGE_HEADERS_BASE, "next-action": "403414edda4cca5c2d2f4b6251357fb8254b715dc9", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         resp_6b = session_req.post(url_base, headers=h_6b, data=json.dumps([id_token]))
 
         match = re.search(r'__session=([^;]+)', resp_6b.headers.get("set-cookie", ""))
@@ -235,21 +425,21 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
         else: session_req.cookies.set("__session", id_token, domain="www.mage.space", path="/")
 
         log_task(task_id, "🌐 ADIM 7-10: Oturum açılış sinyalleri...")
-        h_7 = {**MAGE_HEADERS_BASE, "next-action": "00fe3e87d33dbb585f5ffc95f3b64e31a040c71b7d", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
+        h_7 = {**MAGE_HEADERS_BASE, "next-action": "004faa2bfcf87315d355647ac27a97ec3da10681a7", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         session_req.post(url_base, headers=h_7, data="[]")
-        h_8 = {**MAGE_HEADERS_BASE, "next-action": "7f458edefe7eaf76ee6672d8f31e6c44b748b529f1", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
+        h_8 = {**MAGE_HEADERS_BASE, "next-action": "7f4e0e9b10ee6fcc428ed320cb6380a5395ecc6876", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         session_req.post(url_base, headers=h_8, data="[]")
         payload_9 = json.dumps([local_id, "$undefined"])
-        h_9 = {**MAGE_HEADERS_BASE, "next-action": "60cca13a8cd0fe23bb362d3f090b3722353d636cd4", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base, "content-length": str(len(payload_9))}
+        h_9 = {**MAGE_HEADERS_BASE, "next-action": "606ea0c4da2dbccf708f546d8b47c6730bc6f6dfe1", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base, "content-length": str(len(payload_9))}
         session_req.post(url_base, headers=h_9, data=payload_9)
 
         if task_id not in tasks: return
 
         log_task(task_id, "⚙️ ADIM 11: Settings değiştiriliyor...")
-        h_11 = {**MAGE_HEADERS_BASE, "next-action": "40b85cfadb4ae6fba91cd71357a319d679a2e54a62", "next-router-state-tree": _settings_router_state_tree(), "referer": "https://www.mage.space/settings"}
+        h_11 = {**MAGE_HEADERS_BASE, "next-action": "40f138ede08c8f23d4935a57fef8e9bd4f0c1fa299", "next-router-state-tree": _settings_router_state_tree(), "referer": "https://www.mage.space/settings"}
         session_req.post("https://www.mage.space/settings", headers=h_11, data=json.dumps([{"rating": "M+", "moderation": ["suggestive", "nudity", "violence", "nsfw"]}]))
 
-        h_12 = {**MAGE_HEADERS_BASE, "next-action": "60f4bfd3857dbe7fd3081411e4843c708e0bf3e3b8", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
+        h_12 = {**MAGE_HEADERS_BASE, "next-action": "60504e32c82efd78691ca44fe403127904130c7507", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
 
         cdn_urls = []
         for i, duri in enumerate(data_uris):
@@ -316,7 +506,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
                 arch_config["nano_banana_v2_aspect_ratio"] = nano_banana_v2_aspect_ratio
             payload_13 = [{"architectureConfig": arch_config, "architectureConfigToSave": "$0:0:architectureConfig", "authToken": id_token, "conceptId": None, "activePowerPack": None}]
 
-        h_13 = {**MAGE_HEADERS_BASE, "next-action": "404f78770860c7f3f0d9688276b791a615bc4219a6", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
+        h_13 = {**MAGE_HEADERS_BASE, "next-action": "407876bb74f87cb9f48cb11a92568bd2125638b2c0", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
         resp_13 = session_req.post("https://www.mage.space/explore", headers=h_13, data=json.dumps(payload_13).encode("utf-8"), timeout=120)
 
         h_match = re.search(r'"history_id":"([^"]+)"', resp_13.text)
@@ -328,7 +518,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
 
         url_14 = "https://www.mage.space/creations"
         payload_14 = json.dumps([local_id, 100, 0, {"status": "success", "type": "$undefined"}])
-        h_14 = {**MAGE_HEADERS_BASE, "next-action": "7888a54672a9f4abf6abe443fc8d974f074759eaa0", "next-router-state-tree": _creations_router_state_tree(), "referer": "https://www.mage.space/creations"}
+        h_14 = {**MAGE_HEADERS_BASE, "next-action": "78fd776a62fbbeb8c9147728f7e541d839750fc2d3", "next-router-state-tree": _creations_router_state_tree(), "referer": "https://www.mage.space/creations"}
 
         result_url = None
         for _ in range(60):
