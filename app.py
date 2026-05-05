@@ -76,7 +76,7 @@ TEMPMAIL_INIT_HEADERS = {
     'Accept': ('text/html,application/xhtml+xml,application/xml;q=0.9,'
                'image/avif,image/webp,image/apng,*/*;q=0.8,'
                'application/signed-exchange;v=b3;q=0.7'),
-    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Encoding': 'identity',
     'Accept-Language': 'tr-TR,tr;q=0.9',
     'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                    'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -93,7 +93,7 @@ TEMPMAIL_INIT_HEADERS = {
 
 TEMPMAIL_LW_HEADERS = {
     'Accept': '*/*',
-    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Encoding': 'identity',
     'Accept-Language': 'tr-TR,tr;q=0.9',
     'Content-Type': 'application/json',
     'Origin': 'https://temp-mail.asia',
