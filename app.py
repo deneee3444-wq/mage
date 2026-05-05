@@ -8,12 +8,25 @@ import threading
 import uuid
 import urllib.parse
 import functools
+import random
+import string
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs
 from flask import Flask, render_template, request, jsonify, Response, session, redirect, url_for
 
 app = Flask(__name__)
 app.secret_key = 'mage_studio_local_secret_2024'
+
+# ── Cloudflare Worker Proxy ────────────────────────────────
+CF_WORKER = os.environ.get("CF_WORKER_URL", "https://purple-hill-47e9.akopertu.workers.dev")
+
+def _cf(url: str) -> str:
+    """URL'yi Cloudflare Worker üzerinden proxy'le."""
+    return f"{CF_WORKER}/proxy?url={urllib.parse.quote(url, safe='')}"
+
+def _new_tm_session() -> requests.Session:
+    """Temp-mail için requests session döndürür."""
+    return requests.Session()
 
 # ── Uygulama Şifresi ───────────────────────────────────────
 APP_PASSWORD = '123'
@@ -39,6 +52,24 @@ POLL_COMPONENTS = [
     'frontend.components.token-login',
     'frontend.components.check-mail',
     'frontend.components.inbox-message',
+]
+
+WHITELIST_DOMAINS = [
+    "pmail.asia",
+    "umail.asia",
+    "cmail.asia",
+    "tempmailt.com",
+    "t-mail.asia",
+    "okyre.com",
+    "1mail.edu.pl",
+    "asia.banglatip.com",
+    "asia.1maill.com",
+    "bd.1maill.com",
+    "in.1maill.com",
+    "bd.5secmail.com",
+    "in.5secmail.com",
+    "ng.5secmail.com",
+    "asia.5secmail.com"
 ]
 
 TEMPMAIL_INIT_HEADERS = {
@@ -159,11 +190,11 @@ def _tm_parse_inbox_keys(snapshot_str: str):
 
 def _tempmail_init():
     """
-    temp-mail.asia'ya bağlanır, geçici e-posta + oturum bilgilerini döndürür.
-    Döner: (email, csrf, components, tm_session)
+    temp-mail.asia'ya bağlanır, rastgele bir mail oluşturup (whitelist'ten) 
+    geçici e-posta + oturum bilgilerini döndürür.
     """
-    tm_session = requests.Session()
-    r = tm_session.get('https://temp-mail.asia/', headers=TEMPMAIL_INIT_HEADERS, timeout=30)
+    tm_session = _new_tm_session()
+    r = tm_session.get(_cf('https://temp-mail.asia/'), headers=TEMPMAIL_INIT_HEADERS, timeout=30)
     r.raise_for_status()
     html = r.text
 
@@ -172,6 +203,52 @@ def _tempmail_init():
         raise Exception("Temp-mail: data-csrf veya email HTML'de bulunamadı!")
 
     components = _tm_extract_livewire_components(html)
+
+    # ── İstenen Domainlerle Mail Değiştirme Adımı ──
+    if WHITELIST_DOMAINS:
+        chars = string.ascii_lowercase + string.digits
+        custom_username = random.choice(string.ascii_lowercase) + ''.join(random.choices(chars, k=9))
+        custom_domain = random.choice(WHITELIST_DOMAINS)
+        target_email = f"{custom_username}@{custom_domain}"
+
+        check_mail_comp = components.get('frontend.components.check-mail')
+        if check_mail_comp:
+            change_email_payload = {
+                "_token": csrf,
+                "components": [
+                    {
+                        "snapshot": check_mail_comp['snapshot'],
+                        "updates": {
+                            "username": custom_username,
+                            "domain": custom_domain
+                        },
+                        "calls": [
+                            {"method": "checkEmailAddress", "params": [], "metadata": {}}
+                        ]
+                    }
+                ]
+            }
+
+            lw_headers = TEMPMAIL_LW_HEADERS.copy()
+            lw_headers['x-csrf-token'] = csrf
+
+            try:
+                change_resp = tm_session.post(
+                    _cf('https://temp-mail.asia/livewire/update'),
+                    headers=lw_headers,
+                    json=change_email_payload,
+                    timeout=30
+                )
+                if change_resp.ok:
+                    change_data = change_resp.json()
+                    for comp_resp in change_data.get('components', []):
+                        new_snap = comp_resp.get('snapshot')
+                        if new_snap:
+                            components['frontend.components.check-mail']['snapshot'] = new_snap
+                    email = target_email
+            except Exception:
+                pass  # Değiştirme başarısız olursa orijinal mail ile devam edecek
+
     return email, csrf, components, tm_session
 
 
@@ -185,17 +262,20 @@ def _tempmail_poll_for_magic_link(email, csrf, components, tm_session, log_fn=No
 
     inbox_snapshot = None
     inbox_keys = []
+    
+    lw_headers = TEMPMAIL_LW_HEADERS.copy()
+    lw_headers['x-csrf-token'] = csrf
 
-    for _ in range(24):   # 24 × 5s = 120s
+    for _ in range(60):   # 24 × 5s = 120s
         payload = _tm_build_poll_payload(csrf, components, email)
         resp = tm_session.post(
-            'https://temp-mail.asia/livewire/update',
-            headers=TEMPMAIL_LW_HEADERS,
+            _cf('https://temp-mail.asia/livewire/update'),
+            headers=lw_headers,
             json=payload,
             timeout=30,
         )
         if not resp.ok:
-            time.sleep(10)
+            time.sleep(2)
             continue
 
         data = resp.json()
@@ -219,7 +299,7 @@ def _tempmail_poll_for_magic_link(email, csrf, components, tm_session, log_fn=No
             _log(f"✉  Mail geldi! ID: {inbox_keys[0]}")
             break
 
-        time.sleep(5)
+        time.sleep(2)
 
     if not inbox_keys:
         raise Exception("❌ Mage magic link maili gelmedi (120s zaman aşımı).")
@@ -235,8 +315,8 @@ def _tempmail_poll_for_magic_link(email, csrf, components, tm_session, log_fn=No
         }],
     }
     view_resp = tm_session.post(
-        'https://temp-mail.asia/livewire/update',
-        headers=TEMPMAIL_LW_HEADERS,
+        _cf('https://temp-mail.asia/livewire/update'),
+        headers=lw_headers,
         json=view_payload,
         timeout=30,
     )
@@ -514,7 +594,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
         history_id = h_match.group(1)
 
         log_task(task_id, "⏳ ADIM 14: Sonuç bekleniyor...")
-        time.sleep(15)
+        time.sleep(2)
 
         url_14 = "https://www.mage.space/creations"
         payload_14 = json.dumps([local_id, 100, 0, {"status": "success", "type": "$undefined"}])
@@ -547,7 +627,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
                 elif img_match: result_url = img_match.group(1)
 
             if result_url: break
-            time.sleep(5)
+            time.sleep(2)
 
         if result_url:
             label = "🎬 VİDEO" if mode == "video" else "✨ GÖRSEL"
