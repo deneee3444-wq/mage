@@ -55,6 +55,12 @@ POLL_COMPONENTS = [
 ]
 
 WHITELIST_DOMAINS = [
+    "pmail.asia",
+    "umail.asia",
+    "cmail.asia",
+    "tempmailt.com",
+    "t-mail.asia",
+    "okyre.com",
     "1mail.edu.pl",
     "asia.banglatip.com",
     "asia.1maill.com",
@@ -70,7 +76,7 @@ TEMPMAIL_INIT_HEADERS = {
     'Accept': ('text/html,application/xhtml+xml,application/xml;q=0.9,'
                'image/avif,image/webp,image/apng,*/*;q=0.8,'
                'application/signed-exchange;v=b3;q=0.7'),
-    'Accept-Encoding': 'identity',
+    'Accept-Encoding': 'gzip, deflate, br',
     'Accept-Language': 'tr-TR,tr;q=0.9',
     'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                    'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -87,7 +93,7 @@ TEMPMAIL_INIT_HEADERS = {
 
 TEMPMAIL_LW_HEADERS = {
     'Accept': '*/*',
-    'Accept-Encoding': 'identity',
+    'Accept-Encoding': 'gzip, deflate, br',
     'Accept-Language': 'tr-TR,tr;q=0.9',
     'Content-Type': 'application/json',
     'Origin': 'https://temp-mail.asia',
@@ -260,7 +266,7 @@ def _tempmail_poll_for_magic_link(email, csrf, components, tm_session, log_fn=No
     lw_headers = TEMPMAIL_LW_HEADERS.copy()
     lw_headers['x-csrf-token'] = csrf
 
-    for _ in range(60):   # 24 × 5s = 120s
+    for _ in range(120):   # 24 × 5s = 120s
         payload = _tm_build_poll_payload(csrf, components, email)
         resp = tm_session.post(
             _cf('https://temp-mail.asia/livewire/update'),
@@ -595,7 +601,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
         h_14 = {**MAGE_HEADERS_BASE, "next-action": "78fd776a62fbbeb8c9147728f7e541d839750fc2d3", "next-router-state-tree": _creations_router_state_tree(), "referer": "https://www.mage.space/creations"}
 
         result_url = None
-        for _ in range(60):
+        for _ in range(120):
             if task_id not in tasks: return
             resp_14 = session_req.post(url_14, headers=h_14, data=payload_14, timeout=30)
             if history_id in resp_14.text:
