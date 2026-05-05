@@ -55,12 +55,6 @@ POLL_COMPONENTS = [
 ]
 
 WHITELIST_DOMAINS = [
-    "pmail.asia",
-    "umail.asia",
-    "cmail.asia",
-    "tempmailt.com",
-    "t-mail.asia",
-    "okyre.com",
     "1mail.edu.pl",
     "asia.banglatip.com",
     "asia.1maill.com",
