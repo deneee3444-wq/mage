@@ -55,20 +55,20 @@ POLL_COMPONENTS = [
 ]
 
 WHITELIST_DOMAINS = [
-    "pmail.asia",
-    "umail.asia",
-    "cmail.asia",
-    "tempmailt.com",
-    "t-mail.asia",
-    "okyre.com",
-    "1mail.edu.pl",
-    "asia.banglatip.com",
-    "asia.1maill.com",
-    "bd.1maill.com",
-    "in.1maill.com",
-    "bd.5secmail.com",
-    "in.5secmail.com",
-    "ng.5secmail.com",
+    #"pmail.asia",
+    #"umail.asia",
+    #"cmail.asia",
+    #"tempmailt.com",
+    #"t-mail.asia",
+    #"okyre.com",
+    #"1mail.edu.pl",
+    #"asia.banglatip.com",
+    #"asia.1maill.com",
+    #"bd.1maill.com",
+    #"in.1maill.com",
+    #"bd.5secmail.com",
+    #"in.5secmail.com",
+    #"ng.5secmail.com",
     "asia.5secmail.com"
 ]
 
