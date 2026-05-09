@@ -55,20 +55,20 @@ POLL_COMPONENTS = [
 ]
 
 WHITELIST_DOMAINS = [
-    #"pmail.asia",
-    #"umail.asia",
-    #"cmail.asia",
-    #"tempmailt.com",
-    #"t-mail.asia",
-    #"okyre.com",
-    #"1mail.edu.pl",
-    #"asia.banglatip.com",
-    #"asia.1maill.com",
-    #"bd.1maill.com",
-    #"in.1maill.com",
-    #"bd.5secmail.com",
-    #"in.5secmail.com",
-    #"ng.5secmail.com",
+    # "pmail.asia",
+    # "umail.asia",
+    # "cmail.asia",
+    # "tempmailt.com",
+    # "t-mail.asia",
+    # "okyre.com",
+    "1mail.edu.pl",
+    "asia.banglatip.com",
+    "asia.1maill.com",
+    "bd.1maill.com",
+    "in.1maill.com",
+    "bd.5secmail.com",
+    "in.5secmail.com",
+    "ng.5secmail.com",
     "asia.5secmail.com"
 ]
 
@@ -497,7 +497,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
 
         log_task(task_id, "🍪 ADIM 6b: Session cookie alınıyor...")
         url_base = f"https://www.mage.space/explore?onboarding=1&apiKey={FIREBASE_API_KEY}&oobCode={oob_code}&mode=signIn&lang=en"
-        h_6b = {**MAGE_HEADERS_BASE, "next-action": "403414edda4cca5c2d2f4b6251357fb8254b715dc9", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
+        h_6b = {**MAGE_HEADERS_BASE, "next-action": "40f8302e76351a383ba16d0a71a38048b41e7bcb9e", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         resp_6b = session_req.post(url_base, headers=h_6b, data=json.dumps([id_token]))
 
         match = re.search(r'__session=([^;]+)', resp_6b.headers.get("set-cookie", ""))
@@ -505,21 +505,21 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
         else: session_req.cookies.set("__session", id_token, domain="www.mage.space", path="/")
 
         log_task(task_id, "🌐 ADIM 7-10: Oturum açılış sinyalleri...")
-        h_7 = {**MAGE_HEADERS_BASE, "next-action": "004faa2bfcf87315d355647ac27a97ec3da10681a7", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
+        h_7 = {**MAGE_HEADERS_BASE, "next-action": "00e0766680dc6e3d36f8e4f73ae8e070253f35d41c", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         session_req.post(url_base, headers=h_7, data="[]")
-        h_8 = {**MAGE_HEADERS_BASE, "next-action": "7f4e0e9b10ee6fcc428ed320cb6380a5395ecc6876", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
+        h_8 = {**MAGE_HEADERS_BASE, "next-action": "7f4b9f4feb3b168ad2bd686e0835036e1b42b46769", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         session_req.post(url_base, headers=h_8, data="[]")
         payload_9 = json.dumps([local_id, "$undefined"])
-        h_9 = {**MAGE_HEADERS_BASE, "next-action": "606ea0c4da2dbccf708f546d8b47c6730bc6f6dfe1", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base, "content-length": str(len(payload_9))}
+        h_9 = {**MAGE_HEADERS_BASE, "next-action": "60f83046e0981a6c6f106050da96af2b1dda9b2608", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base, "content-length": str(len(payload_9))}
         session_req.post(url_base, headers=h_9, data=payload_9)
 
         if task_id not in tasks: return
 
         log_task(task_id, "⚙️ ADIM 11: Settings değiştiriliyor...")
-        h_11 = {**MAGE_HEADERS_BASE, "next-action": "40f138ede08c8f23d4935a57fef8e9bd4f0c1fa299", "next-router-state-tree": _settings_router_state_tree(), "referer": "https://www.mage.space/settings"}
+        h_11 = {**MAGE_HEADERS_BASE, "next-action": "40def13162cc2ecb3c376d3a092d9497757e378dd9", "next-router-state-tree": _settings_router_state_tree(), "referer": "https://www.mage.space/settings"}
         session_req.post("https://www.mage.space/settings", headers=h_11, data=json.dumps([{"rating": "M+", "moderation": ["suggestive", "nudity", "violence", "nsfw"]}]))
 
-        h_12 = {**MAGE_HEADERS_BASE, "next-action": "60504e32c82efd78691ca44fe403127904130c7507", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
+        h_12 = {**MAGE_HEADERS_BASE, "next-action": "607c57539c298183e030fdb0a6265caf3e816e528b", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
 
         cdn_urls = []
         for i, duri in enumerate(data_uris):
@@ -586,7 +586,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
                 arch_config["nano_banana_v2_aspect_ratio"] = nano_banana_v2_aspect_ratio
             payload_13 = [{"architectureConfig": arch_config, "architectureConfigToSave": "$0:0:architectureConfig", "authToken": id_token, "conceptId": None, "activePowerPack": None}]
 
-        h_13 = {**MAGE_HEADERS_BASE, "next-action": "407876bb74f87cb9f48cb11a92568bd2125638b2c0", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
+        h_13 = {**MAGE_HEADERS_BASE, "next-action": "407ca2a0193729da68adfb5c6ddb37c3f7d7ed8942", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
         resp_13 = session_req.post("https://www.mage.space/explore", headers=h_13, data=json.dumps(payload_13).encode("utf-8"), timeout=120)
 
         h_match = re.search(r'"history_id":"([^"]+)"', resp_13.text)
@@ -598,7 +598,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
 
         url_14 = "https://www.mage.space/creations"
         payload_14 = json.dumps([local_id, 100, 0, {"status": "success", "type": "$undefined"}])
-        h_14 = {**MAGE_HEADERS_BASE, "next-action": "78fd776a62fbbeb8c9147728f7e541d839750fc2d3", "next-router-state-tree": _creations_router_state_tree(), "referer": "https://www.mage.space/creations"}
+        h_14 = {**MAGE_HEADERS_BASE, "next-action": "78ed3b3817aba247aa17406de6144674033f67e766", "next-router-state-tree": _creations_router_state_tree(), "referer": "https://www.mage.space/creations"}
 
         result_url = None
         for _ in range(120):
