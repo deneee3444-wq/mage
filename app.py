@@ -505,7 +505,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
         else: session_req.cookies.set("__session", id_token, domain="www.mage.space", path="/")
 
         log_task(task_id, "🌐 ADIM 7-10: Oturum açılış sinyalleri...")
-        h_7 = {**MAGE_HEADERS_BASE, "next-action": "00e0766680dc6e3d36f8e4f73ae8e070253f35d41c", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
+        h_7 = {**MAGE_HEADERS_BASE, "next-action": "40e0766680dc6e3d36f8e4f73ae8e070253f35d41c", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         session_req.post(url_base, headers=h_7, data="[]")
         h_8 = {**MAGE_HEADERS_BASE, "next-action": "7f4b9f4feb3b168ad2bd686e0835036e1b42b46769", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         session_req.post(url_base, headers=h_8, data="[]")
