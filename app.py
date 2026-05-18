@@ -8,25 +8,12 @@ import threading
 import uuid
 import urllib.parse
 import functools
-import random
-import string
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs
 from flask import Flask, render_template, request, jsonify, Response, session, redirect, url_for
 
 app = Flask(__name__)
 app.secret_key = 'mage_studio_local_secret_2024'
-
-# ── Cloudflare Worker Proxy ────────────────────────────────
-CF_WORKER = os.environ.get("CF_WORKER_URL", "https://purple-hill-47e9.akopertu.workers.dev")
-
-def _cf(url: str) -> str:
-    """URL'yi Cloudflare Worker üzerinden proxy'le."""
-    return f"{CF_WORKER}/proxy?url={urllib.parse.quote(url, safe='')}"
-
-def _new_tm_session() -> requests.Session:
-    """Temp-mail için requests session döndürür."""
-    return requests.Session()
 
 # ── Uygulama Şifresi ───────────────────────────────────────
 APP_PASSWORD = '123'
@@ -46,118 +33,26 @@ def login_required(f):
 FIREBASE_API_KEY = "AIzaSyAzUV2NNUOlLTL04jwmUw9oLhjteuv6Qr4"
 CONTINUE_URL     = "https://www.mage.space/explore?onboarding=1"
 
-# ── Temp-Mail Sabitleri ────────────────────────────────────
-POLL_COMPONENTS = [
-    'frontend.components.action',
-    'frontend.components.token-login',
-    'frontend.components.check-mail',
-    'frontend.components.inbox-message',
-]
-
-WHITELIST_DOMAINS = [
-    # "pmail.asia",
-    # "umail.asia",
-    # "cmail.asia",
-    # "tempmailt.com",
-    # "t-mail.asia",
-    # "okyre.com",
-    "1mail.edu.pl",
-    "asia.banglatip.com",
-    "asia.1maill.com",
-    "bd.1maill.com",
-    "in.1maill.com",
-    "bd.5secmail.com",
-    "in.5secmail.com",
-    "ng.5secmail.com",
-    "asia.5secmail.com"
-]
-
-TEMPMAIL_INIT_HEADERS = {
-    'Accept': ('text/html,application/xhtml+xml,application/xml;q=0.9,'
-               'image/avif,image/webp,image/apng,*/*;q=0.8,'
-               'application/signed-exchange;v=b3;q=0.7'),
-    'Accept-Encoding': 'identity',
-    'Accept-Language': 'tr-TR,tr;q=0.9',
-    'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                   'AppleWebKit/537.36 (KHTML, like Gecko) '
-                   'Chrome/147.0.0.0 Safari/537.36'),
-    'sec-ch-ua': '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"Windows"',
-    'sec-fetch-dest': 'document',
-    'sec-fetch-mode': 'navigate',
-    'sec-fetch-site': 'none',
-    'sec-fetch-user': '?1',
-    'upgrade-insecure-requests': '1',
+# ── LiveTempMail Sabitleri ─────────────────────────────────
+LIVETEMPMAIL_BASE_HEADERS = {
+    "accept-language": "tr-TR,tr;q=0.9",
+    "user-agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                   "AppleWebKit/537.36 (KHTML, like Gecko) "
+                   "Chrome/148.0.0.0 Safari/537.36"),
+    "upgrade-insecure-requests": "1",
 }
 
-TEMPMAIL_LW_HEADERS = {
-    'Accept': '*/*',
-    'Accept-Encoding': 'identity',
-    'Accept-Language': 'tr-TR,tr;q=0.9',
-    'Content-Type': 'application/json',
-    'Origin': 'https://temp-mail.asia',
-    'Referer': 'https://temp-mail.asia/',
-    'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                   'AppleWebKit/537.36 (KHTML, like Gecko) '
-                   'Chrome/147.0.0.0 Safari/537.36'),
-    'x-livewire': '1',
-    'sec-ch-ua': '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"Windows"',
-    'sec-fetch-dest': 'empty',
-    'sec-fetch-mode': 'cors',
-    'sec-fetch-site': 'same-origin',
+LIVETEMPMAIL_MSG_HEADERS = {
+    **LIVETEMPMAIL_BASE_HEADERS,
+    "accept": "application/json, text/javascript, */*; q=0.01",
+    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+    "origin": "https://www.livetempmail.com",
+    "referer": "https://www.livetempmail.com/",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    "x-requested-with": "XMLHttpRequest",
 }
-
-
-def _tm_get_csrf_and_email(html: str):
-    """HTML'den data-csrf token ve email adresini çek."""
-    csrf_match = re.search(r'data-csrf=["\']([^"\']+)["\']', html)
-    email_match = re.search(r"const email\s*=\s*'([^']+)'", html)
-    csrf = csrf_match.group(1) if csrf_match else None
-    email = email_match.group(1) if email_match else None
-    return csrf, email
-
-
-def _tm_extract_livewire_components(html: str):
-    """Sayfadaki tüm Livewire bileşenlerini bul, snapshot'larını döndür."""
-    soup = BeautifulSoup(html, 'html.parser')
-    components = {}
-    for el in soup.find_all(attrs={'wire:snapshot': True}):
-        raw_snapshot = el.get('wire:snapshot', '')
-        try:
-            snap_data = json.loads(raw_snapshot)
-            name = snap_data.get('memo', {}).get('name', '')
-        except Exception:
-            name = ''
-        if name:
-            components[name] = {'snapshot': raw_snapshot, 'name': name}
-    return components
-
-
-def _tm_build_poll_payload(csrf: str, components: dict, email: str):
-    """Mesaj kontrolü için livewire/update payload'ı oluştur."""
-    api_components = []
-    for name in POLL_COMPONENTS:
-        comp = components.get(name)
-        if not comp:
-            continue
-        if name == 'frontend.components.inbox-message':
-            calls = [
-                {"method": "__dispatch", "params": ["syncEmail", {"email": email}], "metadata": {}},
-                {"method": "__dispatch", "params": ["fetchMessages", {}], "metadata": {}},
-            ]
-        else:
-            calls = [
-                {"method": "__dispatch", "params": ["syncEmail", {"email": email}], "metadata": {}},
-            ]
-        api_components.append({
-            "snapshot": comp['snapshot'],
-            "updates": {},
-            "calls": calls,
-        })
-    return {"_token": csrf, "components": api_components}
 
 
 def _tm_extract_mage_url(text: str):
@@ -174,183 +69,102 @@ def _tm_extract_mage_url(text: str):
     return None
 
 
-def _tm_parse_inbox_keys(snapshot_str: str):
-    """snapshot JSON'undan inbox_messages key listesini çek."""
-    try:
-        snap = json.loads(snapshot_str)
-        inbox_msgs = snap.get('data', {}).get('inbox_messages', [])
-        if isinstance(inbox_msgs, list):
-            for item in inbox_msgs:
-                if isinstance(item, dict) and 'keys' in item:
-                    return item['keys']
-    except Exception:
-        pass
-    return []
-
-
 def _tempmail_init():
     """
-    temp-mail.asia'ya bağlanır, rastgele bir mail oluşturup (whitelist'ten) 
-    geçici e-posta + oturum bilgilerini döndürür.
+    livetempmail.com'a bağlanır, geçici e-posta + oturum bilgilerini döndürür.
+    Döndürür: (email, _token, email_token, tm_session)
     """
-    tm_session = _new_tm_session()
-    r = tm_session.get(_cf('https://temp-mail.asia/'), headers=TEMPMAIL_INIT_HEADERS, timeout=30)
-    r.raise_for_status()
-    html = r.text
+    from urllib.parse import unquote as _unquote
 
-    csrf, email = _tm_get_csrf_and_email(html)
-    if not csrf or not email:
-        raise Exception("Temp-mail: data-csrf veya email HTML'de bulunamadı!")
+    tm_session = requests.Session()
 
-    components = _tm_extract_livewire_components(html)
+    resp = tm_session.get(
+        "https://www.livetempmail.com/",
+        headers={
+            **LIVETEMPMAIL_BASE_HEADERS,
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "none",
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
 
-    # ── İstenen Domainlerle Mail Değiştirme Adımı ──
-    if WHITELIST_DOMAINS:
-        chars = string.ascii_lowercase + string.digits
-        custom_username = random.choice(string.ascii_lowercase) + ''.join(random.choices(chars, k=9))
-        custom_domain = random.choice(WHITELIST_DOMAINS)
-        target_email = f"{custom_username}@{custom_domain}"
-
-        check_mail_comp = components.get('frontend.components.check-mail')
-        if check_mail_comp:
-            change_email_payload = {
-                "_token": csrf,
-                "components": [
-                    {
-                        "snapshot": check_mail_comp['snapshot'],
-                        "updates": {
-                            "username": custom_username,
-                            "domain": custom_domain
-                        },
-                        "calls": [
-                            {"method": "checkEmailAddress", "params": [], "metadata": {}}
-                        ]
-                    }
-                ]
-            }
-
-            lw_headers = TEMPMAIL_LW_HEADERS.copy()
-            lw_headers['x-csrf-token'] = csrf
-
+    _token = None
+    for line in resp.text.splitlines():
+        if "_token" in line and "value=" in line:
             try:
-                change_resp = tm_session.post(
-                    _cf('https://temp-mail.asia/livewire/update'),
-                    headers=lw_headers,
-                    json=change_email_payload,
-                    timeout=30
-                )
-                if change_resp.ok:
-                    change_data = change_resp.json()
-                    for comp_resp in change_data.get('components', []):
-                        new_snap = comp_resp.get('snapshot')
-                        if new_snap:
-                            components['frontend.components.check-mail']['snapshot'] = new_snap
-                    email = target_email
+                _token = line.split('value="')[1].split('"')[0]
+                break
             except Exception:
-                pass  # Değiştirme başarısız olursa orijinal mail ile devam edecek
+                pass
 
-    return email, csrf, components, tm_session
+    if not _token:
+        xsrf = tm_session.cookies.get("XSRF-TOKEN")
+        if xsrf:
+            _token = _unquote(xsrf)
+
+    if not _token:
+        raise Exception("LiveTempMail: _token alınamadı!")
+
+    resp2 = tm_session.post(
+        "https://www.livetempmail.com/get_messages",
+        headers=LIVETEMPMAIL_MSG_HEADERS,
+        data={"_token": _token},
+        timeout=30,
+    )
+    resp2.raise_for_status()
+    data = resp2.json()
+
+    mailbox     = data.get("mailbox")
+    email_token = data.get("email_token")
+
+    if not mailbox or not email_token:
+        raise Exception("LiveTempMail: mailbox veya email_token alınamadı!")
+
+    return mailbox, _token, email_token, tm_session
 
 
-def _tempmail_poll_for_magic_link(email, csrf, components, tm_session, log_fn=None):
+def _tempmail_poll_for_magic_link(email, _token, email_token, tm_session, log_fn=None):
     """
-    Gelen kutusunu poll eder ve Mage.space sign-in URL'sini döndürür.
+    livetempmail.com gelen kutusunu poll eder ve Mage.space sign-in URL'sini döndürür.
     """
     def _log(msg):
         if log_fn:
             log_fn(msg)
 
-    inbox_snapshot = None
-    inbox_keys = []
-    
-    lw_headers = TEMPMAIL_LW_HEADERS.copy()
-    lw_headers['x-csrf-token'] = csrf
+    seen_ids = set()
 
-    for _ in range(120):   # 24 × 5s = 120s
-        payload = _tm_build_poll_payload(csrf, components, email)
-        resp = tm_session.post(
-            _cf('https://temp-mail.asia/livewire/update'),
-            headers=lw_headers,
-            json=payload,
-            timeout=30,
-        )
-        if not resp.ok:
-            time.sleep(2)
-            continue
-
-        data = resp.json()
-        resp_comps = data.get('components', [])
-        active_names = [n for n in POLL_COMPONENTS if n in components]
-
-        for i, rc in enumerate(resp_comps):
-            new_snap = rc.get('snapshot', '')
-            if not new_snap or i >= len(active_names):
+    for _ in range(60):  # 60 × 2s = 120s
+        try:
+            resp = tm_session.post(
+                "https://www.livetempmail.com/get_messages",
+                headers=LIVETEMPMAIL_MSG_HEADERS,
+                data={"_token": _token, "email_token": email_token},
+                timeout=30,
+            )
+            if not resp.ok:
+                time.sleep(2)
                 continue
-            target_name = active_names[i]
-            components[target_name]['snapshot'] = new_snap
 
-            if target_name == 'frontend.components.inbox-message':
-                keys = _tm_parse_inbox_keys(new_snap)
-                if keys:
-                    inbox_keys = keys
-                    inbox_snapshot = new_snap
+            for msg in resp.json().get("messages", []):
+                msg_id = msg.get("id")
+                if msg_id in seen_ids:
+                    continue
+                seen_ids.add(msg_id)
 
-        if inbox_keys:
-            _log(f"✉  Mail geldi! ID: {inbox_keys[0]}")
-            break
+                sign_in_url = _tm_extract_mage_url(msg.get("content", ""))
+                if sign_in_url:
+                    _log(f"✉  Mail geldi! ID: {msg_id}")
+                    return sign_in_url
+
+        except Exception as e:
+            _log(f"[!] Poll hatası: {e}")
 
         time.sleep(2)
 
-    if not inbox_keys:
-        raise Exception("❌ Mage magic link maili gelmedi (120s zaman aşımı).")
-
-    # Mesaj içeriğini oku
-    msg_id = inbox_keys[0]
-    view_payload = {
-        "_token": csrf,
-        "components": [{
-            "snapshot": inbox_snapshot,
-            "updates": {},
-            "calls": [{"method": "updateView", "params": [msg_id], "metadata": {}}],
-        }],
-    }
-    view_resp = tm_session.post(
-        _cf('https://temp-mail.asia/livewire/update'),
-        headers=lw_headers,
-        json=view_payload,
-        timeout=30,
-    )
-    view_resp.raise_for_status()
-    view_data = view_resp.json()
-
-    sign_in_url = None
-    for comp_resp in view_data.get('components', []):
-        snap_str = comp_resp.get('snapshot', '')
-        if snap_str:
-            try:
-                snap = json.loads(snap_str)
-                messages_outer = snap.get('data', {}).get('messages', [])
-                if messages_outer and isinstance(messages_outer[0], list):
-                    for msg_group in messages_outer[0]:
-                        if isinstance(msg_group, list):
-                            for msg in msg_group:
-                                if isinstance(msg, dict) and 'content' in msg:
-                                    sign_in_url = _tm_extract_mage_url(msg['content'])
-                                    if sign_in_url:
-                                        break
-                        if sign_in_url:
-                            break
-            except Exception:
-                pass
-        if not sign_in_url:
-            effects_html = comp_resp.get('effects', {}).get('html', '')
-            if effects_html:
-                sign_in_url = _tm_extract_mage_url(effects_html)
-        if sign_in_url:
-            break
-
-    if not sign_in_url:
-        raise Exception("❌ Mage sign-in URL'si mail içinde bulunamadı.")
+    raise Exception("❌ Mage magic link maili gelmedi (120s zaman aşımı).")
 
     return sign_in_url
 
@@ -466,7 +280,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
 
         # ── ADIM 1: Geçici e-posta al ──────────────────────────────────────
         log_task(task_id, "📬 ADIM 1: Geçici e-posta alınıyor...")
-        email, csrf, tm_components, tm_session = _tempmail_init()
+        email, lm_token, lm_email_token, tm_session = _tempmail_init()
         log_task(task_id, f"🎯 Kullanılan Email: {email}")
 
         # ── ADIM 2: Magic link gönder ───────────────────────────────────────
@@ -482,7 +296,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
         # ── ADIM 3: Temp-mail'i poll et, magic link'i bekle ────────────────
         log_task(task_id, "⏳ ADIM 3: Magic link bekleniyor (Maks 120s)...")
         magic_url = _tempmail_poll_for_magic_link(
-            email, csrf, tm_components, tm_session,
+            email, lm_token, lm_email_token, tm_session,
             log_fn=lambda msg: log_task(task_id, msg)
         )
         log_task(task_id, "🔗 Magic link bulundu!")
