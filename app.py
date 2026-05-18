@@ -9,11 +9,20 @@ import uuid
 import urllib.parse
 import functools
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, parse_qs
+from html.parser import HTMLParser
+from urllib.parse import urlparse, parse_qs, unquote
 from flask import Flask, render_template, request, jsonify, Response, session, redirect, url_for
 
 app = Flask(__name__)
 app.secret_key = 'mage_studio_local_secret_2024'
+
+# ── Cloudflare Worker Proxy ────────────────────────────────
+CF_WORKER = os.environ.get("CF_WORKER_URL", "https://purple-hill-47e9.akopertu.workers.dev")
+
+def _cf(url: str) -> str:
+    """URL'yi Cloudflare Worker üzerinden proxy'le."""
+    return f"{CF_WORKER}/proxy?url={urllib.parse.quote(url, safe='')}"
+
 
 # ── Uygulama Şifresi ───────────────────────────────────────
 APP_PASSWORD = '123'
@@ -33,37 +42,58 @@ def login_required(f):
 FIREBASE_API_KEY = "AIzaSyAzUV2NNUOlLTL04jwmUw9oLhjteuv6Qr4"
 CONTINUE_URL     = "https://www.mage.space/explore?onboarding=1"
 
-# ── LiveTempMail Sabitleri ─────────────────────────────────
-LIVETEMPMAIL_BASE_HEADERS = {
-    "accept-language": "tr-TR,tr;q=0.9",
-    "user-agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                   "AppleWebKit/537.36 (KHTML, like Gecko) "
-                   "Chrome/148.0.0.0 Safari/537.36"),
-    "upgrade-insecure-requests": "1",
+# ── Temp-Mail Sabitleri (livetempmail.com) ─────────────────
+LIVETEMPMAIL_INIT_HEADERS = {
+    'Accept': ('text/html,application/xhtml+xml,application/xml;q=0.9,'
+               'image/avif,image/webp,image/apng,*/*;q=0.8,'
+               'application/signed-exchange;v=b3;q=0.7'),
+    'Accept-Encoding': 'identity',
+    'Accept-Language': 'tr-TR,tr;q=0.9',
+    'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                   'AppleWebKit/537.36 (KHTML, like Gecko) '
+                   'Chrome/148.0.0.0 Safari/537.36'),
+    'sec-fetch-dest': 'document',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-site': 'none',
+    'upgrade-insecure-requests': '1',
 }
 
 LIVETEMPMAIL_MSG_HEADERS = {
-    **LIVETEMPMAIL_BASE_HEADERS,
-    "accept": "application/json, text/javascript, */*; q=0.01",
-    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-    "origin": "https://www.livetempmail.com",
-    "referer": "https://www.livetempmail.com/",
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "x-requested-with": "XMLHttpRequest",
+    'Accept': 'application/json, text/javascript, */*; q=0.01',
+    'Accept-Encoding': 'identity',
+    'Accept-Language': 'tr-TR,tr;q=0.9',
+    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    'Origin': 'https://www.livetempmail.com',
+    'Referer': 'https://www.livetempmail.com/',
+    'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                   'AppleWebKit/537.36 (KHTML, like Gecko) '
+                   'Chrome/148.0.0.0 Safari/537.36'),
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'x-requested-with': 'XMLHttpRequest',
 }
 
 
-def _tm_extract_mage_url(text: str):
-    """İçerik metninden mage.space sign-in URL'sini çek."""
-    soup = BeautifulSoup(text, 'html.parser')
-    for a in soup.find_all('a', href=True):
-        href = a['href']
-        if 'mage.space' in href and ('signIn' in href or 'oobCode' in href):
-            return href
-    pattern = r"href=['\"]?(https?://(?:www\.)?mage\.space/[^'\">\s]+)['\"]?"
-    match = re.search(pattern, text)
+def _ltm_extract_mage_url(html: str):
+    """Mail içeriğinden mage.space sign-in URL'sini çek."""
+    class _LinkExtractor(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.link = None
+        def handle_starttag(self, tag, attrs):
+            if tag == 'a' and not self.link:
+                href = dict(attrs).get('href', '')
+                if href and 'mage.space' in href and ('signIn' in href or 'oobCode' in href):
+                    self.link = href
+
+    parser = _LinkExtractor()
+    parser.feed(html)
+    if parser.link:
+        return parser.link
+
+    # Fallback regex
+    match = re.search(r"href=['\"]?(https?://(?:www\.)?mage\.space/[^'\">\s]+)['\"]?", html)
     if match:
         return match.group(1).replace('\\/', '/')
     return None
@@ -71,29 +101,21 @@ def _tm_extract_mage_url(text: str):
 
 def _tempmail_init():
     """
-    livetempmail.com'a bağlanır, geçici e-posta + oturum bilgilerini döndürür.
-    Döndürür: (email, _token, email_token, tm_session)
+    livetempmail.com'a bağlanır, geçici mailbox oluşturur.
+    (email, _token, email_token, seen_ids, tm_session) döndürür.
     """
-    from urllib.parse import unquote as _unquote
-
     tm_session = requests.Session()
 
-    resp = tm_session.get(
-        "https://www.livetempmail.com/",
-        headers={
-            **LIVETEMPMAIL_BASE_HEADERS,
-            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "sec-fetch-dest": "document",
-            "sec-fetch-mode": "navigate",
-            "sec-fetch-site": "none",
-        },
+    r = tm_session.get(
+        _cf('https://www.livetempmail.com/'),
+        headers=LIVETEMPMAIL_INIT_HEADERS,
         timeout=30,
     )
-    resp.raise_for_status()
+    r.raise_for_status()
 
     _token = None
-    for line in resp.text.splitlines():
-        if "_token" in line and "value=" in line:
+    for line in r.text.splitlines():
+        if '_token' in line and 'value=' in line:
             try:
                 _token = line.split('value="')[1].split('"')[0]
                 break
@@ -101,72 +123,67 @@ def _tempmail_init():
                 pass
 
     if not _token:
-        xsrf = tm_session.cookies.get("XSRF-TOKEN")
+        xsrf = tm_session.cookies.get('XSRF-TOKEN')
         if xsrf:
-            _token = _unquote(xsrf)
+            _token = unquote(xsrf)
 
     if not _token:
-        raise Exception("LiveTempMail: _token alınamadı!")
+        raise Exception("livetempmail: _token alınamadı!")
 
     resp2 = tm_session.post(
-        "https://www.livetempmail.com/get_messages",
+        _cf('https://www.livetempmail.com/get_messages'),
         headers=LIVETEMPMAIL_MSG_HEADERS,
-        data={"_token": _token},
+        data={'_token': _token},
         timeout=30,
     )
     resp2.raise_for_status()
     data = resp2.json()
 
-    mailbox     = data.get("mailbox")
-    email_token = data.get("email_token")
+    mailbox    = data.get('mailbox')
+    email_token = data.get('email_token')
 
     if not mailbox or not email_token:
-        raise Exception("LiveTempMail: mailbox veya email_token alınamadı!")
+        raise Exception("livetempmail: mailbox veya email_token alınamadı!")
 
-    return mailbox, _token, email_token, tm_session
+    seen_ids = {msg['id'] for msg in data.get('messages', [])}
+
+    return mailbox, _token, email_token, seen_ids, tm_session
 
 
-def _tempmail_poll_for_magic_link(email, _token, email_token, tm_session, log_fn=None):
+def _tempmail_poll_for_magic_link(email, _token, email_token, seen_ids, tm_session, log_fn=None):
     """
-    livetempmail.com gelen kutusunu poll eder ve Mage.space sign-in URL'sini döndürür.
+    livetempmail.com gelen kutusunu poll eder, Mage.space sign-in URL'sini döndürür.
     """
     def _log(msg):
         if log_fn:
             log_fn(msg)
 
-    seen_ids = set()
-
-    for _ in range(60):  # 60 × 2s = 120s
+    for _ in range(120):  # 120 × 2s = 240s
         try:
             resp = tm_session.post(
-                "https://www.livetempmail.com/get_messages",
+                _cf('https://www.livetempmail.com/get_messages'),
                 headers=LIVETEMPMAIL_MSG_HEADERS,
-                data={"_token": _token, "email_token": email_token},
+                data={'_token': _token, 'email_token': email_token},
                 timeout=30,
             )
             if not resp.ok:
                 time.sleep(2)
                 continue
 
-            for msg in resp.json().get("messages", []):
-                msg_id = msg.get("id")
-                if msg_id in seen_ids:
-                    continue
-                seen_ids.add(msg_id)
-
-                sign_in_url = _tm_extract_mage_url(msg.get("content", ""))
-                if sign_in_url:
-                    _log(f"✉  Mail geldi! ID: {msg_id}")
-                    return sign_in_url
-
+            for msg in resp.json().get('messages', []):
+                msg_id = msg.get('id')
+                if msg_id not in seen_ids:
+                    seen_ids.add(msg_id)
+                    sign_in_url = _ltm_extract_mage_url(msg.get('content', ''))
+                    if sign_in_url:
+                        _log(f"✉  Mail geldi! ID: {msg_id}")
+                        return sign_in_url
         except Exception as e:
             _log(f"[!] Poll hatası: {e}")
 
         time.sleep(2)
 
-    raise Exception("❌ Mage magic link maili gelmedi (120s zaman aşımı).")
-
-    return sign_in_url
+    raise Exception("❌ Mage magic link maili gelmedi (240s zaman aşımı).")
 
 FIREBASE_HEADERS = {
     "Content-Type": "application/json",
@@ -280,7 +297,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
 
         # ── ADIM 1: Geçici e-posta al ──────────────────────────────────────
         log_task(task_id, "📬 ADIM 1: Geçici e-posta alınıyor...")
-        email, lm_token, lm_email_token, tm_session = _tempmail_init()
+        email, _token, email_token, seen_ids, tm_session = _tempmail_init()
         log_task(task_id, f"🎯 Kullanılan Email: {email}")
 
         # ── ADIM 2: Magic link gönder ───────────────────────────────────────
@@ -296,7 +313,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
         # ── ADIM 3: Temp-mail'i poll et, magic link'i bekle ────────────────
         log_task(task_id, "⏳ ADIM 3: Magic link bekleniyor (Maks 120s)...")
         magic_url = _tempmail_poll_for_magic_link(
-            email, lm_token, lm_email_token, tm_session,
+            email, _token, email_token, seen_ids, tm_session,
             log_fn=lambda msg: log_task(task_id, msg)
         )
         log_task(task_id, "🔗 Magic link bulundu!")
