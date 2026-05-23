@@ -3,6 +3,7 @@ import re
 import base64
 import time
 import json
+import html
 import requests
 import threading
 import uuid
@@ -42,8 +43,10 @@ def login_required(f):
 FIREBASE_API_KEY = "AIzaSyAzUV2NNUOlLTL04jwmUw9oLhjteuv6Qr4"
 CONTINUE_URL     = "https://www.mage.space/explore?onboarding=1"
 
-# ── Temp-Mail Sabitleri (livetempmail.com) ─────────────────
-LIVETEMPMAIL_INIT_HEADERS = {
+# ── Temp-Mail Sabitleri (protempmail.com) ──────────────────
+PTM_BASE = "https://protempmail.com"
+
+PTM_INIT_HEADERS = {
     'Accept': ('text/html,application/xhtml+xml,application/xml;q=0.9,'
                'image/avif,image/webp,image/apng,*/*;q=0.8,'
                'application/signed-exchange;v=b3;q=0.7'),
@@ -58,25 +61,9 @@ LIVETEMPMAIL_INIT_HEADERS = {
     'upgrade-insecure-requests': '1',
 }
 
-LIVETEMPMAIL_MSG_HEADERS = {
-    'Accept': 'application/json, text/javascript, */*; q=0.01',
-    'Accept-Encoding': 'identity',
-    'Accept-Language': 'tr-TR,tr;q=0.9',
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-    'Origin': 'https://www.livetempmail.com',
-    'Referer': 'https://www.livetempmail.com/',
-    'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                   'AppleWebKit/537.36 (KHTML, like Gecko) '
-                   'Chrome/148.0.0.0 Safari/537.36'),
-    'sec-fetch-dest': 'empty',
-    'sec-fetch-mode': 'cors',
-    'sec-fetch-site': 'same-origin',
-    'x-requested-with': 'XMLHttpRequest',
-}
 
-
-def _ltm_extract_mage_url(html: str):
-    """Mail içeriğinden mage.space sign-in URL'sini çek."""
+def _ptm_extract_mage_url(html_content: str):
+    """Mail içeriğinden mage.space sign-in URL'sini çek ve HTML entity decode et."""
     class _LinkExtractor(HTMLParser):
         def __init__(self):
             super().__init__()
@@ -88,62 +75,74 @@ def _ltm_extract_mage_url(html: str):
                     self.link = href
 
     parser = _LinkExtractor()
-    parser.feed(html)
+    parser.feed(html_content)
     if parser.link:
-        return parser.link
+        return html.unescape(parser.link)
 
     # Fallback regex
-    match = re.search(r"href=['\"]?(https?://(?:www\.)?mage\.space/[^'\">\s]+)['\"]?", html)
+    match = re.search(r"href=['\"]?(https?://(?:www\.)?mage\.space/[^'\">\s]+)['\"]?", html_content)
     if match:
-        return match.group(1).replace('\\/', '/')
+        return html.unescape(match.group(1).replace('\\/', '/'))
     return None
 
 
 def _tempmail_init():
     """
-    livetempmail.com'a bağlanır, geçici mailbox oluşturur.
+    protempmail.com'a bağlanır, geçici mailbox oluşturur.
     (email, _token, email_token, seen_ids, tm_session) döndürür.
     """
     tm_session = requests.Session()
+    tm_session.headers.update({'User-Agent': PTM_INIT_HEADERS['User-Agent']})
 
     r = tm_session.get(
-        _cf('https://www.livetempmail.com/'),
-        headers=LIVETEMPMAIL_INIT_HEADERS,
+        _cf(f'{PTM_BASE}/tr'),
+        headers=PTM_INIT_HEADERS,
         timeout=30,
     )
     r.raise_for_status()
 
+    # CSRF token meta tag'den çek: <meta name="csrf-token" content="...">
     _token = None
-    for line in r.text.splitlines():
-        if '_token' in line and 'value=' in line:
-            try:
-                _token = line.split('value="')[1].split('"')[0]
-                break
-            except Exception:
-                pass
+    match = re.search(r'<meta[^>]+name=["\']csrf-token["\'][^>]+content=["\']([^"\']+)["\']', r.text)
+    if not match:
+        match = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']csrf-token["\']', r.text)
+    if not match:
+        match = re.search(r'csrf[_-]token["\s:\']+([A-Za-z0-9+/]{20,})', r.text)
+    if match:
+        _token = match.group(1)
 
     if not _token:
-        xsrf = tm_session.cookies.get('XSRF-TOKEN')
-        if xsrf:
-            _token = unquote(xsrf)
+        raise Exception("protempmail: csrf-token alınamadı!")
 
-    if not _token:
-        raise Exception("livetempmail: _token alınamadı!")
+    xsrf = unquote(tm_session.cookies.get('XSRF-TOKEN', ''))
+    msg_headers = {
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Encoding': 'identity',
+        'Accept-Language': 'tr-TR,tr;q=0.9',
+        'Content-Type': 'application/json',
+        'Origin': PTM_BASE,
+        'Referer': f'{PTM_BASE}/tr',
+        'User-Agent': PTM_INIT_HEADERS['User-Agent'],
+        'X-XSRF-TOKEN': xsrf,
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
+    }
 
     resp2 = tm_session.post(
-        _cf('https://www.livetempmail.com/get_messages'),
-        headers=LIVETEMPMAIL_MSG_HEADERS,
-        data={'_token': _token},
+        _cf(f'{PTM_BASE}/get_messages'),
+        headers=msg_headers,
+        json={'_token': _token},
         timeout=30,
     )
     resp2.raise_for_status()
     data = resp2.json()
 
-    mailbox    = data.get('mailbox')
+    mailbox     = data.get('mailbox')
     email_token = data.get('email_token')
 
     if not mailbox or not email_token:
-        raise Exception("livetempmail: mailbox veya email_token alınamadı!")
+        raise Exception("protempmail: mailbox veya email_token alınamadı!")
 
     seen_ids = {msg['id'] for msg in data.get('messages', [])}
 
@@ -152,7 +151,7 @@ def _tempmail_init():
 
 def _tempmail_poll_for_magic_link(email, _token, email_token, seen_ids, tm_session, log_fn=None):
     """
-    livetempmail.com gelen kutusunu poll eder, Mage.space sign-in URL'sini döndürür.
+    protempmail.com gelen kutusunu poll eder, Mage.space sign-in URL'sini döndürür.
     """
     def _log(msg):
         if log_fn:
@@ -160,10 +159,24 @@ def _tempmail_poll_for_magic_link(email, _token, email_token, seen_ids, tm_sessi
 
     for _ in range(120):  # 120 × 2s = 240s
         try:
+            xsrf = unquote(tm_session.cookies.get('XSRF-TOKEN', ''))
+            msg_headers = {
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Encoding': 'identity',
+                'Accept-Language': 'tr-TR,tr;q=0.9',
+                'Content-Type': 'application/json',
+                'Origin': PTM_BASE,
+                'Referer': f'{PTM_BASE}/tr',
+                'User-Agent': PTM_INIT_HEADERS['User-Agent'],
+                'X-XSRF-TOKEN': xsrf,
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-origin',
+            }
             resp = tm_session.post(
-                _cf('https://www.livetempmail.com/get_messages'),
-                headers=LIVETEMPMAIL_MSG_HEADERS,
-                data={'_token': _token, 'email_token': email_token},
+                _cf(f'{PTM_BASE}/get_messages'),
+                headers=msg_headers,
+                json={'_token': _token},
                 timeout=30,
             )
             if not resp.ok:
@@ -174,7 +187,7 @@ def _tempmail_poll_for_magic_link(email, _token, email_token, seen_ids, tm_sessi
                 msg_id = msg.get('id')
                 if msg_id not in seen_ids:
                     seen_ids.add(msg_id)
-                    sign_in_url = _ltm_extract_mage_url(msg.get('content', ''))
+                    sign_in_url = _ptm_extract_mage_url(msg.get('content', ''))
                     if sign_in_url:
                         _log(f"✉  Mail geldi! ID: {msg_id}")
                         return sign_in_url
@@ -328,7 +341,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
 
         log_task(task_id, "🍪 ADIM 6b: Session cookie alınıyor...")
         url_base = f"https://www.mage.space/explore?onboarding=1&apiKey={FIREBASE_API_KEY}&oobCode={oob_code}&mode=signIn&lang=en"
-        h_6b = {**MAGE_HEADERS_BASE, "next-action": "40f8302e76351a383ba16d0a71a38048b41e7bcb9e", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
+        h_6b = {**MAGE_HEADERS_BASE, "next-action": "40eee1b601cdd6d367891499e38489ab2963fdacb1", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         resp_6b = session_req.post(url_base, headers=h_6b, data=json.dumps([id_token]))
 
         match = re.search(r'__session=([^;]+)', resp_6b.headers.get("set-cookie", ""))
@@ -336,21 +349,21 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
         else: session_req.cookies.set("__session", id_token, domain="www.mage.space", path="/")
 
         log_task(task_id, "🌐 ADIM 7-10: Oturum açılış sinyalleri...")
-        h_7 = {**MAGE_HEADERS_BASE, "next-action": "40e0766680dc6e3d36f8e4f73ae8e070253f35d41c", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
+        h_7 = {**MAGE_HEADERS_BASE, "next-action": "40234f997b84e98c71d35fb8a161dbe0f96f089424", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         session_req.post(url_base, headers=h_7, data="[]")
-        h_8 = {**MAGE_HEADERS_BASE, "next-action": "7f4b9f4feb3b168ad2bd686e0835036e1b42b46769", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
+        h_8 = {**MAGE_HEADERS_BASE, "next-action": "7f8a8f9a28cedd3f4a895286e3c45d4c25f833b0cf", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base}
         session_req.post(url_base, headers=h_8, data="[]")
         payload_9 = json.dumps([local_id, "$undefined"])
-        h_9 = {**MAGE_HEADERS_BASE, "next-action": "60f83046e0981a6c6f106050da96af2b1dda9b2608", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base, "content-length": str(len(payload_9))}
+        h_9 = {**MAGE_HEADERS_BASE, "next-action": "6014466a5475c87c2e1f98fdf7223b297a0b52df35", "next-router-state-tree": _router_state_tree(oob_code), "referer": url_base, "content-length": str(len(payload_9))}
         session_req.post(url_base, headers=h_9, data=payload_9)
 
         if task_id not in tasks: return
 
         log_task(task_id, "⚙️ ADIM 11: Settings değiştiriliyor...")
-        h_11 = {**MAGE_HEADERS_BASE, "next-action": "40def13162cc2ecb3c376d3a092d9497757e378dd9", "next-router-state-tree": _settings_router_state_tree(), "referer": "https://www.mage.space/settings"}
+        h_11 = {**MAGE_HEADERS_BASE, "next-action": "40ad5d4e8c06a99afa2409204c105350128224166a", "next-router-state-tree": _settings_router_state_tree(), "referer": "https://www.mage.space/settings"}
         session_req.post("https://www.mage.space/settings", headers=h_11, data=json.dumps([{"rating": "M+", "moderation": ["suggestive", "nudity", "violence", "nsfw"]}]))
 
-        h_12 = {**MAGE_HEADERS_BASE, "next-action": "607c57539c298183e030fdb0a6265caf3e816e528b", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
+        h_12 = {**MAGE_HEADERS_BASE, "next-action": "60fb8c65b82a1eb24bcfbd1fd5feb2e1ff86d214a2", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
 
         cdn_urls = []
         for i, duri in enumerate(data_uris):
@@ -417,7 +430,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
                 arch_config["nano_banana_v2_aspect_ratio"] = nano_banana_v2_aspect_ratio
             payload_13 = [{"architectureConfig": arch_config, "architectureConfigToSave": "$0:0:architectureConfig", "authToken": id_token, "conceptId": None, "activePowerPack": None}]
 
-        h_13 = {**MAGE_HEADERS_BASE, "next-action": "407ca2a0193729da68adfb5c6ddb37c3f7d7ed8942", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
+        h_13 = {**MAGE_HEADERS_BASE, "next-action": "407bc0fc87875afc9cee9daeff86f37d8e8ff7132e", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
         resp_13 = session_req.post("https://www.mage.space/explore", headers=h_13, data=json.dumps(payload_13).encode("utf-8"), timeout=120)
 
         h_match = re.search(r'"history_id":"([^"]+)"', resp_13.text)
@@ -429,7 +442,7 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
 
         url_14 = "https://www.mage.space/creations"
         payload_14 = json.dumps([local_id, 100, 0, {"status": "success", "type": "$undefined"}])
-        h_14 = {**MAGE_HEADERS_BASE, "next-action": "78ed3b3817aba247aa17406de6144674033f67e766", "next-router-state-tree": _creations_router_state_tree(), "referer": "https://www.mage.space/creations"}
+        h_14 = {**MAGE_HEADERS_BASE, "next-action": "781bed28b8d6164ff0dbe73dca4601da698849ccf5", "next-router-state-tree": _creations_router_state_tree(), "referer": "https://www.mage.space/creations"}
 
         result_url = None
         for _ in range(120):
