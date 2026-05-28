@@ -9,6 +9,9 @@ import threading
 import uuid
 import urllib.parse
 import functools
+import random
+import string
+import zstandard as zstd
 from bs4 import BeautifulSoup
 from html.parser import HTMLParser
 from urllib.parse import urlparse, parse_qs, unquote
@@ -43,23 +46,36 @@ def login_required(f):
 FIREBASE_API_KEY = "AIzaSyAzUV2NNUOlLTL04jwmUw9oLhjteuv6Qr4"
 CONTINUE_URL     = "https://www.mage.space/explore?onboarding=1"
 
-# ── Temp-Mail Sabitleri (protempmail.com) ──────────────────
-PTM_BASE = "https://protempmail.com"
+# ── Zemail Sabitleri ve Yardımcıları ───────────────────────
+DOMAINS = ["relayne.top", "thindle.shop", "iark.me", "cloakly.click", "itsfast.tech", "googlemail.com", "gmail.com"]
 
-PTM_INIT_HEADERS = {
-    'Accept': ('text/html,application/xhtml+xml,application/xml;q=0.9,'
-               'image/avif,image/webp,image/apng,*/*;q=0.8,'
-               'application/signed-exchange;v=b3;q=0.7'),
-    'Accept-Encoding': 'identity',
-    'Accept-Language': 'tr-TR,tr;q=0.9',
-    'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                   'AppleWebKit/537.36 (KHTML, like Gecko) '
-                   'Chrome/148.0.0.0 Safari/537.36'),
-    'sec-fetch-dest': 'document',
-    'sec-fetch-mode': 'navigate',
-    'sec-fetch-site': 'none',
-    'upgrade-insecure-requests': '1',
-}
+def decompress_content(content, content_encoding):
+    if not content:
+        return ""
+    if content.startswith(b'(\xb5/\xfd'):
+        try:
+            dctx = zstd.ZstdDecompressor()
+            decompressed_data = dctx.decompress(content, max_output_size=10485760) # 10MB limit
+            return decompressed_data.decode('utf-8', errors='ignore')
+        except Exception as e:
+            print(f"[Warning] Zstd decompression failed: {e}")
+    try:
+        return content.decode('utf-8', errors='ignore')
+    except Exception as e:
+        return str(content)
+
+def find_messages_in_data(data):
+    messages = []
+    if isinstance(data, dict):
+        if "sender_email" in data and "content" in data:
+            messages.append(data)
+        else:
+            for k, v in data.items():
+                messages.extend(find_messages_in_data(v))
+    elif isinstance(data, list):
+        for item in data:
+            messages.extend(find_messages_in_data(item))
+    return messages
 
 
 def _ptm_extract_mage_url(html_content: str):
@@ -71,7 +87,7 @@ def _ptm_extract_mage_url(html_content: str):
         def handle_starttag(self, tag, attrs):
             if tag == 'a' and not self.link:
                 href = dict(attrs).get('href', '')
-                if href and 'mage.space' in href and ('signIn' in href or 'oobCode' in href):
+                if href and 'mage.space' in href and ('signIn' in href or 'oobCode' in href or 'auth/action' in href or 'mode=' in href):
                     self.link = href
 
     parser = _LinkExtractor()
@@ -88,114 +104,206 @@ def _ptm_extract_mage_url(html_content: str):
 
 def _tempmail_init():
     """
-    protempmail.com'a bağlanır, geçici mailbox oluşturur.
-    (email, _token, email_token, seen_ids, tm_session) döndürür.
+    zemail.me'ye bağlanır (CF Worker proxy üzerinden), geçici e-posta + oturum bilgilerini döndürür.
+    Döndürür: (email, csrf, mailbox_snapshot, seen_ids, tm_session)
     """
     tm_session = requests.Session()
-    tm_session.headers.update({'User-Agent': PTM_INIT_HEADERS['User-Agent']})
-
-    r = tm_session.get(
-        _cf(f'{PTM_BASE}/tr'),
-        headers=PTM_INIT_HEADERS,
-        timeout=30,
-    )
-    r.raise_for_status()
-
-    # CSRF token meta tag'den çek: <meta name="csrf-token" content="...">
-    _token = None
-    match = re.search(r'<meta[^>]+name=["\']csrf-token["\'][^>]+content=["\']([^"\']+)["\']', r.text)
-    if not match:
-        match = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']csrf-token["\']', r.text)
-    if not match:
-        match = re.search(r'csrf[_-]token["\s:\']+([A-Za-z0-9+/]{20,})', r.text)
-    if match:
-        _token = match.group(1)
-
-    if not _token:
-        raise Exception("protempmail: csrf-token alınamadı!")
-
-    xsrf = unquote(tm_session.cookies.get('XSRF-TOKEN', ''))
-    msg_headers = {
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Encoding': 'identity',
-        'Accept-Language': 'tr-TR,tr;q=0.9',
-        'Content-Type': 'application/json',
-        'Origin': PTM_BASE,
-        'Referer': f'{PTM_BASE}/tr',
-        'User-Agent': PTM_INIT_HEADERS['User-Agent'],
-        'X-XSRF-TOKEN': xsrf,
-        'sec-fetch-dest': 'empty',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-origin',
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
     }
+    
+    url = "https://zemail.me/mailbox"
+    
+    try:
+        tm_session.get(_cf(url), headers=headers)
+        response = tm_session.get(_cf(url), headers=headers)
+    except Exception as e:
+        raise Exception(f"Zemail connection failed via CF Worker: {e}")
 
-    resp2 = tm_session.post(
-        _cf(f'{PTM_BASE}/get_messages'),
-        headers=msg_headers,
-        json={'_token': _token},
-        timeout=30,
-    )
-    resp2.raise_for_status()
-    data = resp2.json()
+    html_content = decompress_content(response.content, response.headers.get('Content-Encoding'))
+    soup = BeautifulSoup(html_content, 'html.parser')
+    
+    # CSRF token'ı çek
+    csrf = None
+    livewire_script = soup.find('script', attrs={"data-csrf": True})
+    if livewire_script:
+        csrf = livewire_script.get('data-csrf')
+    if not csrf:
+        match = re.search(r'data-csrf="([^"]+)"', html_content)
+        if match:
+            csrf = match.group(1)
+            
+    if not csrf:
+        raise Exception("Could not retrieve CSRF token from Zemail.")
+        
+    action_snapshot = None
+    mailbox_snapshot = None
+    
+    for tag in soup.find_all(attrs={"wire:id": True}):
+        snapshot_str = tag.get("wire:snapshot")
+        if snapshot_str:
+            try:
+                snapshot = json.loads(snapshot_str)
+                name = snapshot.get("memo", {}).get("name")
+                action = snapshot.get("data", {}).get("action")
+                if name == "frontend.action" and action == "customEmail":
+                    action_snapshot = snapshot_str
+                elif name == "frontend.mailbox":
+                    mailbox_snapshot = snapshot_str
+            except:
+                pass
+                
+    email_address = None
+    if action_snapshot:
+        selected_domain = random.choice(DOMAINS)
+        random_username = "".join(random.choices(string.ascii_lowercase + string.digits, k=10))
+        target_email = f"{random_username}@{selected_domain}"
+        
+        update_url = "https://zemail.me/livewire/update"
+        update_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Content-Type": "application/json",
+            "X-Livewire": "",
+            "Referer": "https://zemail.me/mailbox",
+            "Origin": "https://zemail.me",
+        }
+        
+        payload = {
+            "_token": csrf,
+            "components": [
+                {
+                    "snapshot": action_snapshot,
+                    "updates": {
+                        "username": random_username,
+                        "domain": selected_domain
+                    },
+                    "calls": [
+                        {
+                            "path": "",
+                            "method": "create",
+                            "params": []
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        try:
+            update_response = tm_session.post(_cf(update_url), headers=update_headers, json=payload)
+            resp_text = decompress_content(update_response.content, update_response.headers.get('Content-Encoding'))
+            resp_json = json.loads(resp_text)
+            comp = resp_json['components'][0]
+            
+            dispatches = comp.get('effects', {}).get('dispatches', [])
+            has_error = False
+            for dispatch in dispatches:
+                if dispatch.get('name') == 'showAlert':
+                    params = dispatch.get('params', [{}])[0]
+                    if params.get('type') == 'error':
+                        has_error = True
+            
+            if not has_error:
+                response_after = tm_session.get(_cf(url), headers=headers)
+                html_content_after = decompress_content(response_after.content, response_after.headers.get('Content-Encoding'))
+                soup_after = BeautifulSoup(html_content_after, 'html.parser')
+                for tag in soup_after.find_all(attrs={"wire:id": True}):
+                    snapshot_str = tag.get("wire:snapshot")
+                    if snapshot_str:
+                        try:
+                            snapshot = json.loads(snapshot_str)
+                            name = snapshot.get("memo", {}).get("name")
+                            if name == "frontend.mailbox":
+                                mailbox_snapshot = snapshot_str
+                                email_address = snapshot.get("data", {}).get("email")
+                                break
+                        except:
+                            pass
+        except Exception as e:
+            pass
+            
+    if not email_address:
+        if mailbox_snapshot:
+            try:
+                snapshot = json.loads(mailbox_snapshot)
+                email_address = snapshot.get("data", {}).get("email")
+            except:
+                pass
+                
+    if not email_address:
+        raise Exception("Could not determine active temporary email.")
+        
+    seen_ids = set()
+    return email_address, csrf, mailbox_snapshot, seen_ids, tm_session
 
-    mailbox     = data.get('mailbox')
-    email_token = data.get('email_token')
 
-    if not mailbox or not email_token:
-        raise Exception("protempmail: mailbox veya email_token alınamadı!")
-
-    seen_ids = {msg['id'] for msg in data.get('messages', [])}
-
-    return mailbox, _token, email_token, seen_ids, tm_session
-
-
-def _tempmail_poll_for_magic_link(email, _token, email_token, seen_ids, tm_session, log_fn=None):
+def _tempmail_poll_for_magic_link(email, csrf, mailbox_snapshot, seen_ids, tm_session, log_fn=None):
     """
-    protempmail.com gelen kutusunu poll eder, Mage.space sign-in URL'sini döndürür.
+    zemail.me gelen kutusunu poll eder (CF Worker proxy üzerinden) ve Mage.space sign-in URL'sini döndürür.
     """
     def _log(msg):
         if log_fn:
             log_fn(msg)
 
-    for _ in range(120):  # 120 × 2s = 240s
+    update_url = "https://zemail.me/livewire/update"
+    update_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Content-Type": "application/json",
+        "X-Livewire": "",
+        "Referer": "https://zemail.me/mailbox",
+        "Origin": "https://zemail.me",
+    }
+    
+    for _ in range(120): # 120 * 2s = 240s
+        payload = {
+            "_token": csrf,
+            "components": [
+                {
+                    "snapshot": mailbox_snapshot,
+                    "updates": {},
+                    "calls": [
+                        {
+                            "path": "",
+                            "method": "__dispatch",
+                            "params": ["fetchMessages", {}]
+                        }
+                    ]
+                }
+            ]
+        }
+        
         try:
-            xsrf = unquote(tm_session.cookies.get('XSRF-TOKEN', ''))
-            msg_headers = {
-                'Accept': 'application/json, text/plain, */*',
-                'Accept-Encoding': 'identity',
-                'Accept-Language': 'tr-TR,tr;q=0.9',
-                'Content-Type': 'application/json',
-                'Origin': PTM_BASE,
-                'Referer': f'{PTM_BASE}/tr',
-                'User-Agent': PTM_INIT_HEADERS['User-Agent'],
-                'X-XSRF-TOKEN': xsrf,
-                'sec-fetch-dest': 'empty',
-                'sec-fetch-mode': 'cors',
-                'sec-fetch-site': 'same-origin',
-            }
-            resp = tm_session.post(
-                _cf(f'{PTM_BASE}/get_messages'),
-                headers=msg_headers,
-                json={'_token': _token},
-                timeout=30,
-            )
-            if not resp.ok:
-                time.sleep(2)
-                continue
-
-            for msg in resp.json().get('messages', []):
-                msg_id = msg.get('id')
-                if msg_id not in seen_ids:
-                    seen_ids.add(msg_id)
-                    sign_in_url = _ptm_extract_mage_url(msg.get('content', ''))
+            response = tm_session.post(_cf(update_url), headers=update_headers, json=payload)
+            resp_text = decompress_content(response.content, response.headers.get('Content-Encoding'))
+            resp_json = json.loads(resp_text)
+            comp = resp_json['components'][0]
+            
+            mailbox_snapshot = comp['snapshot']
+            snapshot_data = json.loads(mailbox_snapshot)
+            
+            messages = find_messages_in_data(snapshot_data.get('data', {}))
+            
+            for msg in messages:
+                sender = msg.get('sender_email', '')
+                subject = msg.get('subject', '')
+                content = msg.get('content', '')
+                
+                if 'noreply@mage.space' in sender or 'Mage' in subject:
+                    _log(f"✉ Mail geldi! Gönderen: {sender}")
+                    sign_in_url = _ptm_extract_mage_url(content)
                     if sign_in_url:
-                        _log(f"✉  Mail geldi! ID: {msg_id}")
                         return sign_in_url
+                        
         except Exception as e:
             _log(f"[!] Poll hatası: {e}")
-
+            
         time.sleep(2)
-
+        
     raise Exception("❌ Mage magic link maili gelmedi (240s zaman aşımı).")
 
 FIREBASE_HEADERS = {
