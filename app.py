@@ -47,7 +47,7 @@ FIREBASE_API_KEY = "AIzaSyAzUV2NNUOlLTL04jwmUw9oLhjteuv6Qr4"
 CONTINUE_URL     = "https://www.mage.space/explore?onboarding=1"
 
 # ── Zemail Sabitleri ve Yardımcıları ───────────────────────
-DOMAINS = ["relayne.top", "thindle.shop", "iark.me", "cloakly.click", "itsfast.tech", "googlemail.com", "gmail.com"]
+DOMAINS = ["itsfast.tech"] # "googlemail.com", "gmail.com", "relayne.top", "thindle.shop", "iark.me", "cloakly.click"
 
 def decompress_content(content, content_encoding):
     if not content:
