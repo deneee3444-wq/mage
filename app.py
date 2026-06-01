@@ -350,8 +350,8 @@ VIDEO_MODELS = {
         "resolution": "480p",
     },
     "blueberry": {
-        "model_id": "blueberry-v2",
-        "architecture": "blueberry",
+        "model_id": "raspberry",
+        "architecture": "raspberry",
         "aspect_ratio": "landscape",
         "blueberry_aspect_ratio": "16:9",
         "resolution": "720p",
