@@ -330,6 +330,7 @@ MODELS = {
     "mango-v3":       {"model_id": "mango-v3",       "architecture": "mango",          "resolution": "2K"},
     "mango":          {"model_id": "mango",           "architecture": "mango",          "resolution": "2K"},
     "guava":          {"model_id": "guava",           "architecture": "guava",          "resolution": "1K"},
+    "guava-pro-v1-5":          {"model_id": "guava-pro-v1-5",           "architecture": "guava",          "resolution": "1K"}
     "nano_banana_v2": {"model_id": "nano_banana_v2",  "architecture": "nano_banana_v2", "resolution": "2K"},
 }
 
@@ -347,6 +348,13 @@ VIDEO_MODELS = {
         "aspect_ratio": "landscape",
         "kiwi_aspect_ratio": "16:9",
         "resolution": "480p",
+    },
+    "blueberry": {
+        "model_id": "blueberry-v2",
+        "architecture": "blueberry",
+        "aspect_ratio": "landscape",
+        "blueberry_aspect_ratio": "16:9",
+        "resolution": "720p",
     },
 }
 
