@@ -587,6 +587,9 @@ select:focus { border-color: var(--accent); }
           <div class="model-card" data-val="kiwi">
             <div class="mc-name">KIWI</div><div class="mc-desc">Hızlı üretim</div>
           </div>
+           <div class="model-card" data-val="raspberry">
+            <div class="mc-name">RASPBERRY</div><div class="mc-desc">Hızlı üretim</div>
+          </div>
         </div>
       </div>
 
@@ -609,6 +612,11 @@ select:focus { border-color: var(--accent); }
           </div>
           <!-- Kiwi: aynı seçenekler, ayrı state -->
           <div class="pills" id="format-pills-kiwi" style="display:none">
+            <div class="pill active" data-val="16:9">16:9</div>
+            <div class="pill" data-val="9:16">9:16</div>
+            <div class="pill" data-val="1:1">1:1</div>
+          </div>
+          <div class="pills" id="format-pills-raspberry" style="display:none">
             <div class="pill active" data-val="16:9">16:9</div>
             <div class="pill" data-val="9:16">9:16</div>
             <div class="pill" data-val="1:1">1:1</div>
@@ -811,6 +819,7 @@ let selImageArch   = 'mango';
 let selDuration    = 5;
 let selPeachFormat = '16:9';
 let selKiwiFormat  = '16:9';
+let selRaspberryFormat  = '16:9';
 let selAspect      = 'cinema';
 let selNanoAspect  = '16:9';
 let audioEnabled   = true; // DEFAULT ON
@@ -971,6 +980,7 @@ function makeModelCards(id, cb) {
 makePills('duration-pills',      v => selDuration = parseInt(v));
 makePills('format-pills-peach',  v => selPeachFormat = v);
 makePills('format-pills-kiwi',   v => selKiwiFormat = v);
+makePills('format-pills-kiwi',   v => selRaspBerryFormat = v);
 makePills('aspect-pills',        v => selAspect = v);
 makePills('nano-aspect-pills',   v => selNanoAspect = v);
 
@@ -978,6 +988,7 @@ makeModelCards('video-model-cards', v => {
   selVideoModel = v;
   document.getElementById('format-pills-peach').style.display = v==='peach_max' ? '' : 'none';
   document.getElementById('format-pills-kiwi').style.display  = v==='kiwi'      ? '' : 'none';
+  document.getElementById('format-pills-raspberry').style.display  = v==='raspberry'      ? '' : 'none';
 });
 
 makeModelCards('image-model-cards', (v, arch) => {
@@ -1035,7 +1046,7 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
     fd.append('model', selVideoModel);
     fd.append('video_duration', selDuration);
     fd.append('video_audio', audioEnabled ? 'true' : 'false');
-    fd.append('video_format', selVideoModel==='peach_max' ? selPeachFormat : selKiwiFormat);
+    fd.append('video_format', selVideoModel==='peach_max' ? selPeachFormat : selKiwiFormat );
   } else {
     for (const f of imgFiles) fd.append('images', f);
     fd.append('model', selImageModel);
