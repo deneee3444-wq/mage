@@ -1046,7 +1046,7 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
     fd.append('model', selVideoModel);
     fd.append('video_duration', selDuration);
     fd.append('video_audio', audioEnabled ? 'true' : 'false');
-    fd.append('video_format', selVideoModel==='peach_max' ? selPeachFormat : selKiwiFormat );
+    fd.append('video_format', selVideoModel === 'peach_max' ? selPeachFormat : selVideoModel === 'raspberry' ? selRaspberryFormat : selKiwiFormat);
   } else {
     for (const f of imgFiles) fd.append('images', f);
     fd.append('model', selImageModel);
