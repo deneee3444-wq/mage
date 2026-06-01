@@ -349,11 +349,11 @@ VIDEO_MODELS = {
         "kiwi_aspect_ratio": "16:9",
         "resolution": "480p",
     },
-    "blueberry": {
+    "raspberry": {
         "model_id": "raspberry",
         "architecture": "raspberry",
         "aspect_ratio": "landscape",
-        "blueberry_aspect_ratio": "16:9",
+        "raspberry_aspect_ratio": "16:9",
         "resolution": "720p",
     },
 }
