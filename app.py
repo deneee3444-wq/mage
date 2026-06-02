@@ -47,7 +47,7 @@ FIREBASE_API_KEY = "AIzaSyAzUV2NNUOlLTL04jwmUw9oLhjteuv6Qr4"
 CONTINUE_URL     = "https://www.mage.space/explore?onboarding=1"
 
 # ── Zemail Sabitleri ve Yardımcıları ───────────────────────
-DOMAINS = ["itsfast.tech"] # "googlemail.com", "gmail.com", "relayne.top", "thindle.shop", "iark.me", "cloakly.click"
+DOMAINS = ["relayne.top", "thindle.shop", "iark.me", "cloakly.click", "itsfast.tech", "googlemail.com", "gmail.com"]
 
 def decompress_content(content, content_encoding):
     if not content:
@@ -326,35 +326,75 @@ MAGE_HEADERS_BASE = {
 }
 
 MODELS = {
-    "mango-v2":       {"model_id": "mango-v2",       "architecture": "mango",          "resolution": "2K"},
-    "mango-v3":       {"model_id": "mango-v3",       "architecture": "mango",          "resolution": "2K"},
-    "mango":          {"model_id": "mango",           "architecture": "mango",          "resolution": "2K"},
-    "guava":          {"model_id": "guava",           "architecture": "guava",          "resolution": "1K"},
-    "guava-pro-v1-5": {"model_id": "guava-pro-v1-5",   "architecture": "guava",          "resolution": "1K"},
-    "nano_banana_v2": {"model_id": "nano_banana_v2",  "architecture": "nano_banana_v2", "resolution": "2K"},
+    "mango-v2":       {"model_id": "mango-v2",       "architecture": "mango",          "resolution": "2K",  "label": "MANGO V2",       "desc": "2K, dengeli kalite"},
+    "mango-v3":       {"model_id": "mango-v3",       "architecture": "mango",          "resolution": "2K",  "label": "MANGO V3",       "desc": "2K, geliştirilmiş"},
+    "mango":          {"model_id": "mango",           "architecture": "mango",          "resolution": "2K",  "label": "MANGO",          "desc": "2K, klasik"},
+    "guava":          {"model_id": "guava",           "architecture": "guava",          "resolution": "1K",  "label": "GUAVA",          "desc": "1K, hızlı"},
+    "nano_banana_v2": {"model_id": "nano_banana_v2",  "architecture": "nano_banana_v2", "resolution": "2K",  "label": "NANO V2",        "desc": "2K, detay odaklı"},
+    "guava-pro-v1-5": {"model_id": "guava-pro-v1-5",  "architecture": "guava",          "resolution": "1K",  "label": "GUAVA PRO 1.5",  "desc": "1K, pro kalite"},
+    "grok-imagine-image-quality": {"model_id": "grok-imagine-image-quality", "architecture": "grok_image", "resolution": "2k", "label": "GROK IMAGE", "desc": "1K/2K, üst kalite"},
 }
 
 VIDEO_MODELS = {
     "peach_max": {
         "model_id": "peach_max",
         "architecture": "peach_max",
-        "aspect_ratio": "cinema",
-        "peach_max_aspect_ratio": "16:9",
         "resolution": "480p",
+        "label": "PEACH MAX",
+        "desc": "Sinematik kalite",
+        "durations": ["5", "10"],
+        "formats": ["16:9", "9:16", "1:1"],
+        "has_audio": True,
+        "has_end_frame": True,
+        "max_images": 1,
     },
     "kiwi": {
         "model_id": "kiwi",
         "architecture": "kiwi",
-        "aspect_ratio": "landscape",
-        "kiwi_aspect_ratio": "16:9",
         "resolution": "480p",
+        "label": "KIWI",
+        "desc": "Hızlı üretim",
+        "durations": ["5", "10"],
+        "formats": ["16:9", "9:16", "1:1"],
+        "has_audio": True,
+        "has_end_frame": True,
+        "max_images": 1,
     },
     "raspberry": {
         "model_id": "raspberry",
         "architecture": "raspberry",
-        "aspect_ratio": "landscape",
-        "raspberry_aspect_ratio": "16:9",
         "resolution": "720p",
+        "label": "RASPBERRY",
+        "desc": "720p, sesli, 5 ref görsel",
+        "durations": ["3"],
+        "formats": ["16:9", "9:16", "1:1"],
+        "has_audio": True,
+        "has_end_frame": False,
+        "max_images": 5,
+    },
+    "blueberry-v2": {
+        "model_id": "blueberry-v2",
+        "architecture": "blueberry",
+        "resolution": "720p",
+        "label": "BLUEBERRY 2",
+        "desc": "720p, sesli, start/end frame",
+        "durations": ["3"],
+        "formats": ["16:9", "9:16", "1:1"],
+        "has_audio": True,
+        "has_end_frame": True,
+        "max_images": 1,
+    },
+    "grok-imagine-video": {
+        "model_id": "grok-imagine-video",
+        "architecture": "grok_video",
+        "resolution": "480p",
+        "label": "GROK VIDEO",
+        "desc": "480p, 5 ref görsel",
+        "durations": ["3"],
+        "formats": ["16:9", "9:16", "1:1"],
+        "has_audio": False,
+        "has_end_frame": False,
+        "max_images": 5,
     },
 }
 
@@ -518,19 +558,38 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
             log_task(task_id, f"🎬 ADIM 13: Video üretimi başlıyor ({video_cfg['model_id']})...")
             format_to_aspect = {"16:9": "cinema", "9:16": "portrait", "1:1": "square"}
             general_aspect = format_to_aspect.get(video_format, "cinema")
+            arch = video_cfg["architecture"]
             arch_config = {
-                "seed": None, "audio": video_audio, "prompt": prompt,
+                "seed": None, "prompt": prompt,
                 "duration": str(video_duration), "model_id": video_cfg["model_id"],
                 "fast_mode": True, "resolution": video_cfg["resolution"],
-                "architecture": video_cfg["architecture"], "aspect_ratio": general_aspect,
+                "architecture": arch, "aspect_ratio": general_aspect,
                 "image": main_cdn,
-                "additional_images": [cdn_url_end] if cdn_url_end else None,
-                "last_image": cdn_url_end if cdn_url_end else "$undefined",
             }
-            if video_cfg["architecture"] == "peach_max":
+            if arch == "peach_max":
+                arch_config["audio"] = video_audio
+                arch_config["additional_images"] = [cdn_url_end] if cdn_url_end else None
+                arch_config["last_image"] = cdn_url_end if cdn_url_end else "$undefined"
                 arch_config["peach_max_aspect_ratio"] = video_format
-            elif video_cfg["architecture"] == "kiwi":
+            elif arch == "kiwi":
+                arch_config["audio"] = video_audio
+                arch_config["additional_images"] = [cdn_url_end] if cdn_url_end else None
+                arch_config["last_image"] = cdn_url_end if cdn_url_end else "$undefined"
                 arch_config["kiwi_aspect_ratio"] = video_format
+            elif arch == "raspberry":
+                arch_config["additional_images"] = additional_cdns if additional_cdns else []
+                arch_config["first_image"] = ""
+                arch_config["raspberry_aspect_ratio"] = video_format
+            elif arch == "blueberry":
+                arch_config["audio"] = video_audio
+                arch_config["shot_type"] = "single"
+                arch_config["prompt_extend"] = False
+                arch_config["additional_images"] = []
+                arch_config["last_image"] = cdn_url_end if cdn_url_end else "$undefined"
+                arch_config["blueberry_aspect_ratio"] = video_format
+            elif arch == "grok_video":
+                arch_config["additional_images"] = additional_cdns if additional_cdns else []
+                arch_config["grok_video_aspect_ratio"] = video_format
             payload_13 = [{"architectureConfig": arch_config, "architectureConfigToSave": "$0:0:architectureConfig", "authToken": id_token, "conceptId": None, "activePowerPack": None}]
         else:
             model_config = MODELS.get(model_key, MODELS["mango-v2"])
@@ -544,7 +603,10 @@ def run_mage_task(task_id, data_uris, prompt, mode, model_key, aspect_ratio,
             }
             if model_config["architecture"] == "nano_banana_v2" and nano_banana_v2_aspect_ratio:
                 arch_config["nano_banana_v2_aspect_ratio"] = nano_banana_v2_aspect_ratio
-            payload_13 = [{"architectureConfig": arch_config, "architectureConfigToSave": "$0:0:architectureConfig", "authToken": id_token, "conceptId": None, "activePowerPack": None}]
+            if model_config["architecture"] == "grok_image" and nano_banana_v2_aspect_ratio:
+                arch_config["grok_image_aspect_ratio"] = nano_banana_v2_aspect_ratio
+            concept_id = "2f0e2deb8a66425b97e1044abb562a82" if model_key == "grok-imagine-image-quality" else None
+            payload_13 = [{"architectureConfig": arch_config, "architectureConfigToSave": "$0:0:architectureConfig", "authToken": id_token, "conceptId": concept_id, "activePowerPack": None}]
 
         h_13 = {**MAGE_HEADERS_BASE, "next-action": "407bc0fc87875afc9cee9daeff86f37d8e8ff7132e", "next-router-state-tree": _explore_router_state_tree(), "referer": "https://www.mage.space/explore"}
         resp_13 = session_req.post("https://www.mage.space/explore", headers=h_13, data=json.dumps(payload_13).encode("utf-8"), timeout=120)
@@ -626,6 +688,35 @@ def logout():
 def index():
     return render_template('index.html', show_login=False, error=False)
 
+@app.route('/api/models')
+@login_required
+def api_models():
+    """Frontend'e model listesini döndürür - HTML'de hardcode'a gerek kalmaz."""
+    img_models = []
+    for key, cfg in MODELS.items():
+        img_models.append({
+            "key": key,
+            "label": cfg.get("label", key),
+            "desc": cfg.get("desc", ""),
+            "architecture": cfg["architecture"],
+            "resolution": cfg["resolution"],
+        })
+    vid_models = []
+    for key, cfg in VIDEO_MODELS.items():
+        vid_models.append({
+            "key": key,
+            "label": cfg.get("label", key),
+            "desc": cfg.get("desc", ""),
+            "architecture": cfg["architecture"],
+            "resolution": cfg["resolution"],
+            "durations": cfg.get("durations", ["5"]),
+            "formats": cfg.get("formats", ["16:9", "9:16", "1:1"]),
+            "has_audio": cfg.get("has_audio", True),
+            "has_end_frame": cfg.get("has_end_frame", True),
+            "max_images": cfg.get("max_images", 1),
+        })
+    return jsonify({"image_models": img_models, "video_models": vid_models})
+
 @app.route('/start_task', methods=['POST'])
 @login_required
 def start_task():
@@ -642,12 +733,19 @@ def start_task():
     end_data_uri = None
 
     if mode == "video":
-        if 'image' not in request.files:
-            return jsonify({"error": "Start frame eksik"}), 400
-        file = request.files['image']
-        if file.filename == '':
-            return jsonify({"error": "Dosya seçilmedi"}), 400
-        data_uris.append(_file_to_data_uri(file))
+        files = request.files.getlist('images')
+        if files and any(f.filename != '' for f in files):
+            for f in files[:5]:
+                if f.filename != '':
+                    data_uris.append(_file_to_data_uri(f))
+        elif 'image' in request.files:
+            file = request.files['image']
+            if file.filename != '':
+                data_uris.append(_file_to_data_uri(file))
+        
+        if not data_uris:
+            return jsonify({"error": "Start frame veya referans görsel eksik"}), 400
+
         if 'end_image' in request.files:
             end_file = request.files['end_image']
             if end_file and end_file.filename != '':
