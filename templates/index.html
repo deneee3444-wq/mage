@@ -546,9 +546,9 @@ select:focus { border-color: var(--accent); }
     <!-- VIDEO section -->
     <div class="video-only" id="video-section">
 
-      <div class="field">
-        <label>Start Frame</label>
-        <div class="image-area">
+      <div class="field" id="video-input-field">
+        <label id="video-input-label">Start Frame</label>
+        <div class="image-area" id="video-image-area-single">
           <div class="dropzone" id="start-dropzone" tabindex="0">
             <input type="file" id="start-file-input" accept="image/png,image/jpeg,image/webp">
             <span class="drop-icon">🎞️</span>
@@ -558,6 +558,19 @@ select:focus { border-color: var(--accent); }
             <img class="preview-img" id="start-preview-img" src="" alt="">
             <button class="preview-remove" id="start-remove-btn">✕</button>
             <div class="frame-badge" id="start-frame-badge">📷 FRAME</div>
+          </div>
+        </div>
+        <div class="image-area full-width" id="video-image-area-multi" style="display:none">
+          <div class="dropzone" id="vid-img-dropzone" tabindex="0">
+            <input type="file" id="vid-img-file-input" accept="image/png,image/jpeg,image/webp" multiple>
+            <span class="drop-icon">🎞️</span>
+            <div class="drop-text"><strong>Görsel sürükle</strong> veya tıkla<br><span id="vid-img-max-text" style="font-size:0.65rem">Çoklu yükleme (maks 5)</span></div>
+          </div>
+          <div class="img-preview-outer" id="vid-img-preview-outer">
+            <div class="img-grid-preview c1" id="vid-img-grid-preview"></div>
+            <button class="preview-remove" id="vid-img-remove-btn">✕</button>
+            <button class="img-add-more-btn" id="vid-img-add-more-btn" title="Daha fazla görsel ekle">+</button>
+            <div id="vid-img-count-badge" style="position:absolute;bottom:6px;left:6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--accent);background:rgba(200,255,0,0.15);border:1px solid rgba(200,255,0,0.35);padding:2px 8px;border-radius:2px;display:none;z-index:5;"></div>
           </div>
         </div>
       </div>
@@ -581,15 +594,7 @@ select:focus { border-color: var(--accent); }
       <div class="field">
         <label>Video Model</label>
         <div class="model-cards" id="video-model-cards">
-          <div class="model-card active" data-val="peach_max">
-            <div class="mc-name">PEACH MAX</div><div class="mc-desc">Sinematik kalite</div>
-          </div>
-          <div class="model-card" data-val="kiwi">
-            <div class="mc-name">KIWI</div><div class="mc-desc">Hızlı üretim</div>
-          </div>
-           <div class="model-card" data-val="raspberry">
-            <div class="mc-name">RASPBERRY</div><div class="mc-desc">Hızlı üretim</div>
-          </div>
+          <!-- Video modelleri backend'den dinamik yüklenir -->
         </div>
       </div>
 
@@ -597,30 +602,13 @@ select:focus { border-color: var(--accent); }
         <div class="toggle-group">
           <label>Duration</label>
           <div class="pills" id="duration-pills">
-            <div class="pill active" data-val="3">3s</div>
-            <div class="pill active" data-val="5">5s</div>
-            <div class="pill" data-val="10">10s</div>
+            <!-- Duration pilleri model seçimine göre dinamik güncellenir -->
           </div>
         </div>
         <div class="toggle-group">
           <label>Format</label>
-          <!-- Peach Max: her zaman 16:9, 9:16, 1:1 -->
-          <div class="pills" id="format-pills-peach">
-            <div class="pill active" data-val="16:9">16:9</div>
-            <div class="pill" data-val="9:16">9:16</div>
-            <div class="pill" data-val="1:1">1:1</div>
-          </div>
-          <!-- Kiwi: aynı seçenekler, ayrı state -->
-          <div class="pills" id="format-pills-kiwi" style="display:none">
-            <div class="pill active" data-val="16:9">16:9</div>
-            <div class="pill" data-val="9:16">9:16</div>
-            <div class="pill" data-val="1:1">1:1</div>
-          </div>
-          <div class="pills" id="format-pills-raspberry" style="display:none">
-            <div class="pill active" data-val="16:9">16:9</div>
-            <div class="pill" data-val="9:16">9:16</div>
-            <div class="pill" data-val="1:1">1:1</div>
-          </div>
+          <!-- Format pilleri model seçimine göre dinamik oluşturulur -->
+          <div id="dynamic-format-pills"></div>
         </div>
       </div>
 
@@ -656,21 +644,7 @@ select:focus { border-color: var(--accent); }
       <div class="field">
         <label>Image Model</label>
         <div class="model-cards" id="image-model-cards">
-          <div class="model-card active" data-val="mango-v2" data-arch="mango">
-            <div class="mc-name">MANGO V2</div><div class="mc-desc">2K, dengeli kalite</div>
-          </div>
-          <div class="model-card" data-val="mango-v3" data-arch="mango">
-            <div class="mc-name">MANGO V3</div><div class="mc-desc">2K, geliştirilmiş</div>
-          </div>
-          <div class="model-card" data-val="guava" data-arch="guava">
-            <div class="mc-name">GUAVA</div><div class="mc-desc">1K, hızlı</div>
-          </div>
-           <div class="model-card" data-val="guava-pro-v1-5" data-arch="guava">
-            <div class="mc-name">GUAVA V1.5 PRO</div><div class="mc-desc">1K, hızlı</div>
-          </div>
-          <div class="model-card" data-val="nano_banana_v2" data-arch="nano_banana_v2">
-            <div class="mc-name">NANO V2</div><div class="mc-desc">2K, detay odaklı</div>
-          </div>
+          <!-- Image modelleri backend'den dinamik yüklenir -->
         </div>
       </div>
 
@@ -819,10 +793,13 @@ let selImageArch   = 'mango';
 let selDuration    = 5;
 let selPeachFormat = '16:9';
 let selKiwiFormat  = '16:9';
-let selRaspberryFormat  = '16:9';
 let selAspect      = 'cinema';
 let selNanoAspect  = '16:9';
 let audioEnabled   = true; // DEFAULT ON
+let _imageModels = [];
+let _videoModels = [];
+let _currentVideoModelCfg = null;
+let vidImgFiles = [];
 
 let activeTasks = {};
 
@@ -957,6 +934,62 @@ function clearImgFiles() {
   document.getElementById('img-count-badge').style.display = 'none';
 }
 
+// Multi image for video
+const vidImgInput = document.getElementById('vid-img-file-input');
+const vidImgDz = document.getElementById('vid-img-dropzone');
+let vidImgAppendMode = false;
+if (vidImgDz && vidImgInput) {
+  vidImgDz.addEventListener('click', (e) => { if(e.target===vidImgInput) return; vidImgAppendMode = false; vidImgInput.click(); });
+  vidImgDz.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){e.preventDefault(); vidImgAppendMode = false; vidImgInput.click();} });
+  vidImgDz.addEventListener('dragover', e => { e.preventDefault(); vidImgDz.classList.add('drag-over'); });
+  vidImgDz.addEventListener('dragleave', e => { if(!vidImgDz.contains(e.relatedTarget)) vidImgDz.classList.remove('drag-over'); });
+  vidImgDz.addEventListener('drop', e => { e.preventDefault(); vidImgDz.classList.remove('drag-over'); if(e.dataTransfer.files.length) setVidImgFiles(Array.from(e.dataTransfer.files), false); });
+  vidImgInput.addEventListener('change', () => { if(vidImgInput.files.length) setVidImgFiles(Array.from(vidImgInput.files), vidImgAppendMode); vidImgAppendMode = false; vidImgInput.value = ''; });
+  document.getElementById('vid-img-remove-btn').addEventListener('click', clearVidImgFiles);
+  document.getElementById('vid-img-add-more-btn').addEventListener('click', () => { vidImgAppendMode = true; vidImgInput.click(); });
+}
+
+function setVidImgFiles(files, append=false) {
+  const maxLimit = _currentVideoModelCfg ? (_currentVideoModelCfg.max_images || 5) : 5;
+  const newFiles = append ? vidImgFiles.concat(Array.from(files)) : Array.from(files);
+  vidImgFiles = newFiles.slice(0, maxLimit);
+  if (!vidImgFiles.length) return;
+  const outer = document.getElementById('vid-img-preview-outer');
+  const grid  = document.getElementById('vid-img-grid-preview');
+  const badge = document.getElementById('vid-img-count-badge');
+  const count = vidImgFiles.length;
+  const cls   = count===1?'c1':count===2?'c2':count===3?'c3':'c4';
+  grid.className = 'img-grid-preview ' + cls;
+  grid.innerHTML = '';
+  const show = Math.min(count,4);
+  for (let i=0; i<show; i++) {
+    const div = document.createElement('div');
+    div.className = 'img-grid-thumb';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(vidImgFiles[i]);
+    img.alt = '';
+    div.appendChild(img);
+    if (i===3 && count>4) {
+      const ov = document.createElement('div');
+      ov.style.cssText='position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:1rem;color:var(--accent);font-weight:600;';
+      ov.textContent='+' + (count-3);
+      div.appendChild(ov);
+    }
+    grid.appendChild(div);
+  }
+  outer.classList.add('visible');
+  vidImgDz.style.display = 'none';
+  badge.textContent = count>1 ? count+' görsel' : '';
+  badge.style.display = count>1 ? 'block' : 'none';
+}
+function clearVidImgFiles() {
+  vidImgFiles = [];
+  document.getElementById('vid-img-preview-outer').classList.remove('visible');
+  vidImgDz.style.display = '';
+  vidImgInput.value = '';
+  document.getElementById('vid-img-count-badge').style.display = 'none';
+}
+
 // ── Pills & model cards ──
 function makePills(id, cb) {
   const el = document.getElementById(id);
@@ -977,26 +1010,127 @@ function makeModelCards(id, cb) {
   });
 }
 
-makePills('duration-pills',      v => selDuration = parseInt(v));
-makePills('format-pills-peach',  v => selPeachFormat = v);
-makePills('format-pills-kiwi',   v => selKiwiFormat = v);
-makePills('format-pills-raspberry',   v => selRaspberryFormat = v);
 makePills('aspect-pills',        v => selAspect = v);
 makePills('nano-aspect-pills',   v => selNanoAspect = v);
 
-makeModelCards('video-model-cards', v => {
-  selVideoModel = v;
-  document.getElementById('format-pills-peach').style.display = v==='peach_max' ? '' : 'none';
-  document.getElementById('format-pills-kiwi').style.display  = v==='kiwi'      ? '' : 'none';
-  document.getElementById('format-pills-raspberry').style.display  = v==='raspberry'      ? '' : 'none';
-});
+// -- Dinamik model yükleme --
+async function loadModelsFromBackend() {
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    _imageModels = data.image_models || [];
+    _videoModels = data.video_models || [];
+    renderImageModelCards();
+    renderVideoModelCards();
+  } catch(e) { console.error('Model yükleme hatası:', e); }
+}
 
-makeModelCards('image-model-cards', (v, arch) => {
-  selImageModel = v; selImageArch = arch||'mango';
-  const isNano = arch==='nano_banana_v2';
-  document.getElementById('nano-ar-row').classList.toggle('visible', isNano);
-  document.getElementById('standard-ar-row').style.display = isNano ? 'none' : '';
-});
+function renderImageModelCards() {
+  const container = document.getElementById('image-model-cards');
+  container.innerHTML = '';
+  _imageModels.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'model-card' + (i === 0 ? ' active' : '');
+    card.dataset.val = m.key;
+    card.dataset.arch = m.architecture;
+    card.innerHTML = `<div class="mc-name">${m.label}</div><div class="mc-desc">${m.desc}</div>`;
+    container.appendChild(card);
+  });
+  if (_imageModels.length) {
+    selImageModel = _imageModels[0].key;
+    selImageArch = _imageModels[0].architecture;
+  }
+  makeModelCards('image-model-cards', (v, arch) => {
+    selImageModel = v; selImageArch = arch || 'mango';
+    const isNano = arch === 'nano_banana_v2';
+    const isGrokImg = arch === 'grok_image';
+    document.getElementById('nano-ar-row').classList.toggle('visible', isNano || isGrokImg);
+    document.getElementById('standard-ar-row').style.display = (isNano || isGrokImg) ? 'none' : '';
+    // Nano AR row label güncelle
+    const nanoLabel = document.querySelector('#nano-ar-row label');
+    if (nanoLabel) nanoLabel.textContent = isGrokImg ? 'Grok Image Oran' : 'Nano Banana Oran';
+  });
+}
+
+function renderVideoModelCards() {
+  const container = document.getElementById('video-model-cards');
+  container.innerHTML = '';
+  _videoModels.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'model-card' + (i === 0 ? ' active' : '');
+    card.dataset.val = m.key;
+    card.innerHTML = `<div class="mc-name">${m.label}</div><div class="mc-desc">${m.desc}</div>`;
+    container.appendChild(card);
+  });
+  if (_videoModels.length) {
+    selVideoModel = _videoModels[0].key;
+    _currentVideoModelCfg = _videoModels[0];
+    updateVideoUIForModel(_videoModels[0]);
+  }
+  makeModelCards('video-model-cards', v => {
+    selVideoModel = v;
+    const cfg = _videoModels.find(m => m.key === v);
+    _currentVideoModelCfg = cfg || null;
+    if (cfg) updateVideoUIForModel(cfg);
+  });
+}
+
+function updateVideoUIForModel(cfg) {
+  // Duration pills güncelle
+  const durContainer = document.getElementById('duration-pills');
+  durContainer.innerHTML = '';
+  (cfg.durations || ['5']).forEach((d, i) => {
+    const pill = document.createElement('div');
+    pill.className = 'pill' + (i === 0 ? ' active' : '');
+    pill.dataset.val = d;
+    pill.textContent = d + 's';
+    durContainer.appendChild(pill);
+  });
+  selDuration = parseInt(cfg.durations?.[0] || '5');
+  makePills('duration-pills', v => selDuration = parseInt(v));
+
+  // Format pills güncelle
+  const fmtContainer = document.getElementById('dynamic-format-pills');
+  fmtContainer.innerHTML = '';
+  const pillsDiv = document.createElement('div');
+  pillsDiv.className = 'pills';
+  pillsDiv.id = 'video-format-pills';
+  (cfg.formats || ['16:9', '9:16', '1:1']).forEach((f, i) => {
+    const pill = document.createElement('div');
+    pill.className = 'pill' + (i === 0 ? ' active' : '');
+    pill.dataset.val = f;
+    pill.textContent = f;
+    pillsDiv.appendChild(pill);
+  });
+  fmtContainer.appendChild(pillsDiv);
+  selPeachFormat = cfg.formats?.[0] || '16:9';
+  makePills('video-format-pills', v => selPeachFormat = v);
+
+  // Audio toggle: model audio destekliyorsa göster
+  const audioRow = document.querySelector('.audio-row');
+  if (audioRow) {
+    audioRow.style.display = cfg.has_audio ? '' : 'none';
+    if (!cfg.has_audio) audioEnabled = false;
+    else audioEnabled = document.getElementById('audio-toggle').checked;
+  }
+
+  // End frame: model end frame destekliyorsa göster
+  const endFrameField = document.getElementById('end-dropzone')?.closest('.field');
+  if (endFrameField) {
+    endFrameField.style.display = cfg.has_end_frame ? '' : 'none';
+  }
+
+  // Single/Multi image input toggle
+  const isMulti = cfg.max_images > 1;
+  document.getElementById('video-input-label').textContent = isMulti ? 'Referans Görseller' : 'Start Frame';
+  document.getElementById('video-image-area-single').style.display = isMulti ? 'none' : '';
+  document.getElementById('video-image-area-multi').style.display = isMulti ? '' : 'none';
+  document.getElementById('vid-img-max-text').textContent = 'Çoklu yükleme (maks ' + cfg.max_images + ')';
+  
+  // Model değiştiğinde yüklenen dosyaları temizleyelim
+  clearStartFrame();
+  clearVidImgFiles();
+}
 
 document.getElementById('audio-toggle').addEventListener('change', function(){ audioEnabled = this.checked; });
 
@@ -1032,8 +1166,14 @@ clearGalBtn.addEventListener('click', async () => {
 document.getElementById('generate-btn').addEventListener('click', async () => {
   const prompt = document.getElementById('prompt').value.trim();
   if (!prompt) { showToast('⚠️ Prompt girin.'); return; }
-  if (activeMode==='video' && !startFile) { showToast('⚠️ Start frame seçin.'); return; }
-  if (activeMode==='image' && !imgFiles.length) { showToast('⚠️ Görsel seçin.'); return; }
+  
+  if (activeMode==='video') {
+    const isMulti = _currentVideoModelCfg && _currentVideoModelCfg.max_images > 1;
+    if (isMulti && !vidImgFiles.length) { showToast('⚠️ Referans görsel seçin.'); return; }
+    if (!isMulti && !startFile) { showToast('⚠️ Start frame seçin.'); return; }
+  } else {
+    if (!imgFiles.length) { showToast('⚠️ Görsel seçin.'); return; }
+  }
 
   const btn = document.getElementById('generate-btn');
   btn.disabled = true; btn.textContent = '⏳ GÖNDERİLİYOR...';
@@ -1041,16 +1181,22 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
   fd.append('prompt', prompt); fd.append('mode', activeMode);
 
   if (activeMode==='video') {
-    fd.append('image', startFile);
-    if (endFile) fd.append('end_image', endFile);
+    const isMulti = _currentVideoModelCfg && _currentVideoModelCfg.max_images > 1;
+    if (isMulti) {
+      for (const f of vidImgFiles) fd.append('images', f);
+      fd.append('image', vidImgFiles[0]); // fallback
+    } else {
+      fd.append('image', startFile);
+      if (endFile) fd.append('end_image', endFile);
+    }
     fd.append('model', selVideoModel);
     fd.append('video_duration', selDuration);
     fd.append('video_audio', audioEnabled ? 'true' : 'false');
-    fd.append('video_format', selVideoModel === 'peach_max' ? selPeachFormat : selVideoModel === 'raspberry' ? selRaspberryFormat : selKiwiFormat);
+    fd.append('video_format', selPeachFormat);
   } else {
     for (const f of imgFiles) fd.append('images', f);
     fd.append('model', selImageModel);
-    if (selImageArch==='nano_banana_v2') {
+    if (selImageArch==='nano_banana_v2' || selImageArch==='grok_image') {
       fd.append('aspect_ratio', selAspect);
       fd.append('nano_banana_v2_aspect_ratio', selNanoAspect);
     } else {
@@ -1062,7 +1208,8 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
     const res = await fetch('/start_task',{method:'POST',body:fd});
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    createJobCard(data.task_id, prompt, activeMode==='video'?selVideoModel:selImageModel, activeMode, startFile||imgFiles[0]);
+    const cardImg = startFile || (vidImgFiles && vidImgFiles[0]) || imgFiles[0];
+    createJobCard(data.task_id, prompt, activeMode==='video'?selVideoModel:selImageModel, activeMode, cardImg);
     pollTask(data.task_id);
     document.querySelector('[data-tab="generations"]').click();
     btn.textContent = '✅ SIRAYA ALINDI!';
@@ -1505,6 +1652,7 @@ async function restoreActiveTasks() {
 }
 
 // ── Init ──
+loadModelsFromBackend();
 loadGallery();
 renderPromptLibrary();
 restoreActiveTasks();
